@@ -45,14 +45,53 @@ FPGA_FREQUENCY = (
 # make pulse template
 # ===================
 
-ptemp = spe.make_pulse_template(
+pt_pulse = spe.make_pulse(
     periode=ANALOG_CONFIG["periode"],
-    analog_config=ANALOG_CONFIG,
-    pulse_config=PULSE_CONFIG,
-    adc_config=ADC_CONFIG,
-    fpga_config=FPGA_CONFIG,
+    pulse_amplitude=PULSE_CONFIG["amplitude"],
+    pulse_decay_time=PULSE_CONFIG["decay_time"],
+)
+pt_bandwitdh_kernel = spe.make_bell(
+    periode=ANALOG_CONFIG["periode"], bell_std=(1 / ANALOG_CONFIG["bandwidth"])
+)
+pt_analog = spe.make_timeseries(
+    num_samples=len(pt_pulse) + 200,
+    periode=ANALOG_CONFIG["periode"]
+)
+pt_analog = spe.add_first_to_second_at(
+    f1=pt_pulse, f2=pt_analog, injection_slices=[200],
+)
+pt_analog = np.convolve(pt_analog, pt_bandwitdh_kernel, mode="same")
+
+pt_adc = spe.make_adc_output(
+    analog=pt_analog,
+    skips=ADC_CONFIG["skips"],
+    noise_amplitude=0.0,
+    amplitude_min=ADC_CONFIG["amplitude_min"],
+    amplitude_max=ADC_CONFIG["amplitude_max"],
     prng=prng,
 )
+
+pt_fpga = spe.make_adc_output(
+    analog=pt_analog,
+    skips=ADC_CONFIG["skips"]//FPGA_CONFIG["adc_repeats"],
+    noise_amplitude=0.0,
+    amplitude_min=ADC_CONFIG["amplitude_min"],
+    amplitude_max=ADC_CONFIG["amplitude_max"],
+    prng=prng,
+)
+
+ptemp = {
+    "analog": pt_analog,
+    "adc": pt_adc,
+    "fpga": pt_fpga,
+    "config": {
+        "analog": ANALOG_CONFIG,
+        "adc": ADC_CONFIG,
+        "fpga": FPGA_CONFIG,
+    },
+}
+
+
 spe.plot.plot_event(event=ptemp, path="pulse_template.jpg")
 
 # populate time series with nsb make_pulses
