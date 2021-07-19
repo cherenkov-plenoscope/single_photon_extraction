@@ -33,12 +33,13 @@ FPGA_CONFIG = {
     "kernel": [],
 }
 
-ADC_FREQUENCY = (1 / ANALOG_CONFIG["periode"]) / ADC_CONFIG[
-    "skips"
-]
+ADC_FREQUENCY = (1 / ANALOG_CONFIG["periode"]) / ADC_CONFIG["skips"]
 
-FPGA_FREQUENCY = (1 / ANALOG_CONFIG["periode"]) / ADC_CONFIG["skips"] * FPGA_CONFIG["adc_repeats"]
-
+FPGA_FREQUENCY = (
+    (1 / ANALOG_CONFIG["periode"])
+    / ADC_CONFIG["skips"]
+    * FPGA_CONFIG["adc_repeats"]
+)
 
 
 # make pulse template
@@ -241,9 +242,8 @@ def fpga_single_extraction_stage(
 
 COOLDOWN_SLICES = len(sub_pulse_template)
 MIN_BASELINE_AMPLITUDE = -0.1 * PULSE_CONFIG["amplitude"]
-OFFSET_SLICES = 10*FPGA_CONFIG["adc_repeats"]
+OFFSET_SLICES = 10 * FPGA_CONFIG["adc_repeats"]
 GRAD_THRESHOLDS = [0.2, 0.15, 0.1]
-
 
 
 FPGA_sig_vs_t = spe.to_analog_level(
@@ -257,7 +257,7 @@ FPGA_pulse_template = spe.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
-)[3*FPGA_CONFIG["adc_repeats"]:11*FPGA_CONFIG["adc_repeats"]]
+)[3 * FPGA_CONFIG["adc_repeats"] : 11 * FPGA_CONFIG["adc_repeats"]]
 spe.plot.plot_extraction_state(
     dig=FPGA_pulse_template,
     ADC_FREQUENCY=FPGA_FREQUENCY,

@@ -3,7 +3,6 @@ import numpy as np
 import sebastians_matplotlib_addons as splt
 
 
-
 def plot_event(
     event,
     path,
@@ -85,9 +84,7 @@ def plot_event(
     splt.close_figure(fig)
 
 
-def plot_extraction_state(
-    dig, ADC_FREQUENCY, truth, path, ylim=None
-):
+def plot_extraction_state(dig, ADC_FREQUENCY, truth, path, ylim=None):
     periode = 1.0 / ADC_FREQUENCY
     fig = splt.figure(splt.FIGURE_16_9)
     ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
