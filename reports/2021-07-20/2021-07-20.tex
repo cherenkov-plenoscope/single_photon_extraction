@@ -37,11 +37,38 @@
 \newcommand{\Ftyp}{F_\text{dark-night}}
 \begin{multicols}{2}%
 %
-The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle.
+The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle from the Cherenkov-light emitted by an air-shower.
 %
-The reconstructions depend solely on the quality of the recorded Cherenkov-light-field.
+Photo-sensors and read-out are cost-drivers.
 %
-\section*{Night-Sky-Background}%
+Instruments must sense blueish Cherenkov-light, better reject reddish night-sky-light, and must reconstruct the arrival-times of the photons with $\sim{}$5\,ns resolution.
+\newline
+%
+We expect a continues read-out into digital buffers, where each individual photon is recorded, to be beneficial for the atmospheric Cherenkov-method as it allows fast computational access to all observables.
+%
+We expect such a read-out to lower the energy-threshold, to improve the separation of Cherenkov- from night-sky-light, and to improve the reconstruction of the cosmic particle \cite{jung2005star,catalano2008single}.
+\newline
+%
+One way of continues read-out are flash analog-digital-converters (ADC)s.
+%
+However, their cost and power-consumption scale rapidly with their sampling frequency $f$.
+%
+\begin{eqnarray*}
+C_\text{ADC}(f) &\sim& f^2,\\
+P_\text{ADC}(f) &\sim& f^2.
+\end{eqnarray*}
+%
+In this report, we explore the usage of many slow ($f$ < 100\,MHz) ADCs.
+%
+We want each ADC to digitizes the signal of a photo-sensor with only little acceptance and thus a small rate of night-sky-photons.
+%
+We hope that when the photo-sensor's acceptance (area and solid angle) is small enough, and thus its rate of night-sky-photons is small, than a slow ADC in combination with a little computing will be able to reconstruct the arrival times of the individual photons sufficiently accurate.
+%
+Since the cost of silicon photo-sensors are almost only proportional to their acceptance, there is no cost overhead when replacing a big sensor with multiple small ones.
+%
+Since our ADCs run slow, their power-consumption and cost might still be competitive despite their large number.
+%
+\section*{Sensing Night-Sky-Photons}%
 \label{sec:nsb}%
 %
 Typical photo-sensors in the atmospheric-Cherenkov method yield night-sky-photon-rates of
@@ -60,7 +87,7 @@ The typical flux  corresponds to a sky surface brightness of
 %
 Observations take place in the range of fluxes from
 \begin{eqnarray*}
-0.75 &> \F{} / \Ftyp{} >& 4.
+0.8 &> \F{} / \Ftyp{} >& 3.
 \end{eqnarray*}
 %
 New moon, full moon, and clouds all impact $\F{}$.
@@ -114,6 +141,11 @@ The observations of FACT, taken from Sebastian's phd-thesis.
     \label{TabInstrumentsNsbRates}
   \end{center}
 \end{table}
+%
+\section*{Simulating}%
+\label{SecSimulating}%
+%
+
 %
 \bibliographystyle{apalike}%
 \bibliography{/home/relleums/Desktop/starter_kit/sebastians_references/references}%
