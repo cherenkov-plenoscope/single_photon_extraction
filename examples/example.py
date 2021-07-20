@@ -19,13 +19,14 @@ PULSE_CONFIG = {
     "amplitude": 1.0,
     "amplitude_std": 0.0,
     "decay_time": 50e-9,
+    "decay_time_std": 0.0,
 }
 
 ADC_CONFIG = {
     "skips": 24,
     "amplitude_min": -0.8,
     "amplitude_max": 12.0,
-    "noise": 0.05,
+    "amplitude_noise": 0.05,
 }
 
 FPGA_CONFIG = {
@@ -65,7 +66,7 @@ pt_analog = np.convolve(pt_analog, pt_bandwitdh_kernel, mode="same")
 pt_adc = spe.make_adc_output(
     analog=pt_analog,
     skips=ADC_CONFIG["skips"],
-    noise_amplitude=0.0,
+    amplitude_noise=0.0,
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
     prng=prng,
@@ -74,7 +75,7 @@ pt_adc = spe.make_adc_output(
 pt_fpga = spe.make_adc_output(
     analog=pt_analog,
     skips=ADC_CONFIG["skips"]//FPGA_CONFIG["adc_repeats"],
-    noise_amplitude=0.0,
+    amplitude_noise=0.0,
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
     prng=prng,

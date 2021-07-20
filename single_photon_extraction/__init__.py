@@ -97,14 +97,14 @@ def draw_poisson_arrival_times(exposure_time, frequency, prng):
 
 
 def make_adc_output(
-    analog, skips, noise_amplitude, amplitude_min, amplitude_max, prng,
+    analog, skips, amplitude_noise, amplitude_min, amplitude_max, prng,
 ):
     sample_slices = np.arange(0, len(analog), skips)
     out = analog[sample_slices]
 
     # add noise
-    assert noise_amplitude >= 0.0
-    noise = prng.normal(loc=0.0, scale=noise_amplitude, size=(len(out)))
+    assert amplitude_noise >= 0.0
+    noise = prng.normal(loc=0.0, scale=amplitude_noise, size=(len(out)))
     out += noise
 
     # clipping
@@ -197,15 +197,19 @@ def make_night_sky_background_event(
     analog = make_timeseries(num_samples=num_samples, periode=analog_periode)
 
     for true_arrival_slice in true_arrival_slices:
-        amp = pulse_config["amplitude"] + prng.normal(
-            loc=0, scale=pulse_config["amplitude_std"]
+        amp = prng.normal(
+            loc=pulse_config["amplitude"], scale=pulse_config["amplitude_std"]
+        )
+
+        dec = prng.normal(
+            loc=pulse_config["decay_time"], scale=pulse_config["decay_time_std"]
         )
 
         p = make_pulse(
             num_samples=None,
             periode=analog_periode,
             pulse_amplitude=amp,
-            pulse_decay_time=pulse_config["decay_time"],
+            pulse_decay_time=dec,
         )
 
         analog = add_first_to_second_at(
@@ -223,7 +227,7 @@ def make_night_sky_background_event(
     adc = make_adc_output(
         analog=analog,
         skips=adc_config["skips"],
-        noise_amplitude=adc_config["noise"],
+        amplitude_noise=adc_config["amplitude_noise"],
         amplitude_min=adc_config["amplitude_min"],
         amplitude_max=adc_config["amplitude_max"],
         prng=prng,
