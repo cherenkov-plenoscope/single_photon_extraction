@@ -10,60 +10,9 @@ def plot_event(
     axspan=[0.1, 0.1, 0.8, 0.8],
     ylim=None,
 ):
-    analog_timeseries = make_timeseries(
-        num_samples=len(event["analog"]),
-        periode=event["config"]["analog"]["periode"],
-    )
-    adc_timeseries = make_timeseries(
-        num_samples=len(event["adc"]),
-        periode=(
-            event["config"]["analog"]["periode"]
-            * event["config"]["adc"]["skips"]
-        ),
-    )
 
     fig = splt.figure(figstyle)
     ax = splt.add_axes(fig, axspan)
-
-    # analog
-    # ------
-    ax.plot(analog_timeseries, event["analog"], "k")
-
-    # adc
-    # ---
-    splt.ax_add_histogram(
-        ax=ax,
-        bin_edges=adc_timeseries,
-        bincounts=to_analog_level(
-            digital=event["adc"][:-1],
-            amplitude_min=event["config"]["adc"]["amplitude_min"],
-            amplitude_max=event["config"]["adc"]["amplitude_max"],
-        ),
-        linecolor="red",
-        linealpha=0.2,
-        draw_bin_walls=True,
-    )
-
-    # fpga
-    # ----
-    if "fpga" in event:
-        fpga_timeseries = make_timeseries(
-            num_samples=len(event["fpga"]),
-            periode=(
-                event["config"]["analog"]["periode"]
-                * event["config"]["adc"]["skips"]
-                / event["config"]["fpga"]["adc_repeats"]
-            ),
-        )
-        ax.plot(
-            fpga_timeseries,
-            to_analog_level(
-                digital=event["fpga"],
-                amplitude_min=event["config"]["adc"]["amplitude_min"],
-                amplitude_max=event["config"]["adc"]["amplitude_max"],
-            ),
-            "red",
-        )
 
     # truth
     # -----
@@ -76,6 +25,64 @@ def plot_event(
     if "reco_arrival_times" in event:
         for reco_arrival_time in event["reco_arrival_times"]:
             ax.axvline(reco_arrival_time, color="g", linestyle="--")
+
+
+    # analog
+    # ------
+    if "analog" in event:
+        analog_timeseries = make_timeseries(
+            num_samples=len(event["analog"]),
+            periode=event["config"]["analog"]["periode"],
+        )
+        ax.plot(analog_timeseries, event["analog"], "k:")
+
+    # adc
+    # ---
+    if "adc" in event:
+        adc_timeseries = make_timeseries(
+            num_samples=len(event["adc"]),
+            periode=(
+                event["config"]["analog"]["periode"]
+                * event["config"]["adc"]["skips"]
+            ),
+        )
+
+        splt.ax_add_histogram(
+            ax=ax,
+            bin_edges=adc_timeseries,
+            bincounts=to_analog_level(
+                digital=event["adc"][:-1],
+                amplitude_min=event["config"]["adc"]["amplitude_min"],
+                amplitude_max=event["config"]["adc"]["amplitude_max"],
+                num_bits=event["config"]["adc"]["num_bits"],
+            ),
+            linecolor="orange",
+            linealpha=0.2,
+            draw_bin_walls=True,
+        )
+
+    # fpga
+    # ----
+    if "fpga" in event:
+        fpga_timeseries = make_timeseries(
+            num_samples=len(event["fpga"]),
+            periode=(
+                event["config"]["analog"]["periode"]
+                * event["config"]["adc"]["skips"]
+                / event["config"]["fpga"]["adc_repeats"]
+            ),
+        )
+        ax.step(
+            fpga_timeseries,
+            to_analog_level(
+                digital=event["fpga"],
+                amplitude_min=event["config"]["adc"]["amplitude_min"],
+                amplitude_max=event["config"]["adc"]["amplitude_max"],
+                num_bits=event["config"]["fpga"]["num_bits"],
+            ),
+            "red",
+        )
+
 
     ax.set_ylim(ylim)
     ax.set_xlabel("time / s")

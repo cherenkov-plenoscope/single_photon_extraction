@@ -97,7 +97,7 @@ def draw_poisson_arrival_times(exposure_time, frequency, prng):
 
 
 def make_adc_output(
-    analog, skips, amplitude_noise, amplitude_min, amplitude_max, prng,
+    analog, skips, amplitude_noise, amplitude_min, amplitude_max, num_bits, prng,
 ):
     sample_slices = np.arange(0, len(analog), skips)
     out = analog[sample_slices]
@@ -117,53 +117,57 @@ def make_adc_output(
     out = out / (amplitude_max - amplitude_min)
 
     # extend to bit range
-    out = out * 256
-    return out.astype(np.uint8)
+    out = out * (2**num_bits)
+    return out.astype(np.int)
 
 
 def make_fpga_output(
     adc, fpga_adc_repeats, fpga_kernel,
+    fpga_num_bits, adc_num_bits
 ):
     fpga = np.repeat(adc, repeats=fpga_adc_repeats)
     if len(fpga_kernel) > 0:
         fpga = np.convolve(fpga, fpga_kernel, mode="same")
         fpga = fpga / np.sum(fpga_kernel)
+
+    # bit range
+    fpga = fpga * (2**(fpga_num_bits - adc_num_bits))
     return fpga
 
 
 def to_analog_level(
-    digital, amplitude_min, amplitude_max,
+    digital, amplitude_min, amplitude_max, num_bits
 ):
     ana = digital.astype(np.float)
-    ana /= 255
+    ana /= (2**num_bits - 1)
     ana *= amplitude_max - amplitude_min
     ana += amplitude_min
     return ana
 
 
-def benchmark(arrivalsExtracted, arrivalsTruth, windowRadius=10):
-    arrivalsExtracted = np.sort(arrivalsExtracted)
-    arrivalsTruth = np.sort(arrivalsTruth)
+def benchmark(reco_times, true_times, time_delta):
+    reco_times = np.sort(reco_times)
+    true_times = np.sort(true_times)
 
     def find_nearest(array, value):
         return (np.abs(array - value)).argmin()
 
     bench = {"tp": 0, "tn": 0, "fp": 0, "fn": 0}
-    arrivalsExtractedRemaining = arrivalsExtracted.copy()
-    for arrivalTruth in arrivalsTruth:
-        if arrivalsExtractedRemaining.shape[0] == 0:
+    reco_times_remaining = reco_times.copy()
+    for true_time in true_times:
+        if reco_times_remaining.shape[0] == 0:
             bench["fn"] += 1
         else:
-            match = find_nearest(arrivalsExtractedRemaining, arrivalTruth)
-            distance = np.abs(arrivalsExtractedRemaining[match] - arrivalTruth)
-            if distance <= windowRadius:
-                arrivalsExtractedRemaining = np.delete(
-                    arrivalsExtractedRemaining, match
+            match = find_nearest(reco_times_remaining, true_time)
+            distance = np.abs(reco_times_remaining[match] - true_time)
+            if distance <= time_delta:
+                reco_times_remaining = np.delete(
+                    reco_times_remaining, match
                 )
                 bench["tp"] += 1
             else:
                 bench["fn"] += 1
-    bench["fp"] += arrivalsExtractedRemaining.shape[0]
+    bench["fp"] += reco_times_remaining.shape[0]
     return bench
 
 
@@ -230,6 +234,7 @@ def make_night_sky_background_event(
         amplitude_noise=adc_config["amplitude_noise"],
         amplitude_min=adc_config["amplitude_min"],
         amplitude_max=adc_config["amplitude_max"],
+        num_bits=adc_config["num_bits"],
         prng=prng,
     )
 
@@ -237,6 +242,8 @@ def make_night_sky_background_event(
         adc=adc,
         fpga_adc_repeats=fpga_config["adc_repeats"],
         fpga_kernel=fpga_config["kernel"],
+        fpga_num_bits=fpga_config["num_bits"],
+        adc_num_bits=adc_config["num_bits"],
     )
 
     return {

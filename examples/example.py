@@ -4,9 +4,10 @@ import numpy as np
 import sebastians_matplotlib_addons as splt
 
 
+PLOT = False
+
 prng = np.random.Generator(np.random.MT19937(seed=0))
-PLOT = True
-NUM_SAMPLES = 3 * 1000
+NUM_SAMPLES = 1000 * 1000
 
 NSB_RATE = 5e6
 
@@ -27,10 +28,12 @@ ADC_CONFIG = {
     "amplitude_min": -0.8,
     "amplitude_max": 12.0,
     "amplitude_noise": 0.05,
+    "num_bits": 8,
 }
 
 FPGA_CONFIG = {
     "adc_repeats": 6,
+    "num_bits": 10,
     "kernel": [],
 }
 
@@ -69,6 +72,7 @@ pt_adc = spe.make_adc_output(
     amplitude_noise=0.0,
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=ADC_CONFIG["num_bits"],
     prng=prng,
 )
 
@@ -79,6 +83,7 @@ pt_fpga = spe.make_adc_output(
     amplitude_noise=0.0,
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=FPGA_CONFIG["num_bits"],
     prng=prng,
 )
 
@@ -93,8 +98,8 @@ ptemp = {
     },
 }
 
-
-spe.plot.plot_event(event=ptemp, path="pulse_template.jpg")
+if PLOT:
+    spe.plot.plot_event(event=ptemp, path="pulse_template.jpg")
 
 # populate time series with nsb make_pulses
 # ====================================
@@ -110,8 +115,10 @@ event = spe.make_night_sky_background_event(
     prng=prng,
 )
 
-spe.plot.plot_event(event, path="event.jpg")
+if PLOT:
+    spe.plot.plot_event(event, path="event.jpg")
 
+"""
 # run extraction ADC-speed
 # ========================
 
@@ -121,6 +128,7 @@ sig_vs_t = spe.to_analog_level(
     digital=event["adc"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=ADC_CONFIG["num_bits"],
 )
 sig_vs_t[0:offset_slices] = 0.0
 
@@ -128,18 +136,20 @@ pulse_template = spe.to_analog_level(
     digital=ptemp["adc"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=ADC_CONFIG["num_bits"],
 )[3:11]
 spe.plot.plot_extraction_state(
     dig=pulse_template,
     ADC_FREQUENCY=ADC_FREQUENCY,
     truth=event["true_arrival_times"],
-    path="pulse_template.jpg",
+    path="spe_pulse_template.jpg",
 )
 
 sub_pulse_template = -1.0 * spe.to_analog_level(
     digital=ptemp["adc"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=ADC_CONFIG["num_bits"],
 )
 spe.plot.plot_extraction_state(
     dig=sub_pulse_template,
@@ -212,8 +222,8 @@ event["reco_arrival_times"] = (
     * event["config"]["analog"]["periode"]
 )
 
-spe.plot.plot_event(event=event, path="final")
-
+spe.plot.plot_event(event=event, path="final.jpg")
+"""
 
 ## FPGA extraction
 
@@ -248,6 +258,7 @@ def fpga_single_extraction_stage(
     grad_threshold,
     cooldown_slices,
 ):
+    debug = {}
     sig_vs_t_copy = sig_vs_t.copy()
     pulse_template_integral = sum(pulse_template)
 
@@ -255,11 +266,12 @@ def fpga_single_extraction_stage(
         np.convolve(sig_vs_t_copy, pulse_template, mode="same")
         / pulse_template_integral
     )
+    debug["sig_conv_pulse"] = sig_conv_pulse
 
-    grad_sig_conv_pulse = np.gradient(sig_conv_pulse)
-    extraction_candidates = (grad_sig_conv_pulse > grad_threshold).astype(
+    extraction_candidates = (sig_conv_pulse > grad_threshold).astype(
         np.int
     )
+    debug["extraction_candidates"] = extraction_candidates
 
     extraction = timeseries_apply_cooldown(
         timeseries=extraction_candidates, cooldown_slices=cooldown_slices
@@ -267,7 +279,10 @@ def fpga_single_extraction_stage(
 
     # amlitude must not be too low
     valid_baseline = sig_vs_t_copy > min_baseline_amplitude
+    debug["valid_baseline"] = valid_baseline
+
     extraction = np.logical_and(extraction, valid_baseline)
+    debug["extraction"] = extraction
 
     extraction_slices = np.where(extraction)[0] - sub_offset_slices
 
@@ -278,79 +293,111 @@ def fpga_single_extraction_stage(
         injection_slices=extraction_slices,
     )
 
-    return sig_vs_t_copy.copy(), extraction_slices
+    return sig_vs_t_copy.copy(), extraction_slices, debug
 
 
-COOLDOWN_SLICES = len(sub_pulse_template)
+
 MIN_BASELINE_AMPLITUDE = -0.1 * PULSE_CONFIG["amplitude"]
-OFFSET_SLICES = 10 * FPGA_CONFIG["adc_repeats"]
-GRAD_THRESHOLDS = [0.2, 0.15, 0.1]
+OFFSET_SLICES = 60
+GRAD_THRESHOLDS = 0.4 * np.ones(10)
 
 
 FPGA_sig_vs_t = spe.to_analog_level(
     digital=event["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=FPGA_CONFIG["num_bits"],
 )
-FPGA_sig_vs_t[0:OFFSET_SLICES] = 0.0
+ramp_slices = 100
+ramp = np.linspace(0, 1, ramp_slices)
+FPGA_sig_vs_t[0:ramp_slices] = FPGA_sig_vs_t[0:ramp_slices] * ramp
 
 FPGA_pulse_template = spe.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
-)[3 * FPGA_CONFIG["adc_repeats"] : 11 * FPGA_CONFIG["adc_repeats"]]
-spe.plot.plot_extraction_state(
-    dig=FPGA_pulse_template,
-    ADC_FREQUENCY=FPGA_FREQUENCY,
-    truth=event["true_arrival_times"],
-    path="FPGA_pulse_template.jpg",
-)
+    num_bits=FPGA_CONFIG["num_bits"],
+)[5 * FPGA_CONFIG["adc_repeats"] : 11 * FPGA_CONFIG["adc_repeats"]]
+if PLOT:
+    spe.plot.plot_extraction_state(
+        dig=FPGA_pulse_template,
+        ADC_FREQUENCY=FPGA_FREQUENCY,
+        truth=event["true_arrival_times"],
+        path="FPGA_pulse_template.jpg",
+    )
 
 
-sub_pulse_template = -1.0 * spe.to_analog_level(
+FPGA_sub_pulse_template = -1.0 * spe.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
+    num_bits=FPGA_CONFIG["num_bits"],
 )
-spe.plot.plot_extraction_state(
-    dig=sub_pulse_template,
-    ADC_FREQUENCY=FPGA_FREQUENCY,
-    truth=event["true_arrival_times"],
-    path="FPGA_spe_sub_pulse_template.jpg",
-)
+if PLOT:
+    spe.plot.plot_extraction_state(
+        dig=FPGA_sub_pulse_template,
+        ADC_FREQUENCY=FPGA_FREQUENCY,
+        truth=event["true_arrival_times"],
+        path="FPGA_spe_sub_pulse_template.jpg",
+    )
+
+COOLDOWN_SLICES = len(FPGA_sub_pulse_template)
+
+
 
 recos = []
-adcs = []
-
-remain_sig_vs_t = sig_vs_t.copy()
+remain_sig_vs_t = FPGA_sig_vs_t.copy()
 
 for stage in range(len(GRAD_THRESHOLDS)):
-    remain_sig_vs_t, reco_arrival_slices = fpga_single_extraction_stage(
+    next_sig_vs_t, reco_arrival_slices, debug = fpga_single_extraction_stage(
         sig_vs_t=remain_sig_vs_t,
         min_baseline_amplitude=MIN_BASELINE_AMPLITUDE,
-        pulse_template=pulse_template,
-        sub_pulse_template=sub_pulse_template,
+        pulse_template=FPGA_pulse_template,
+        sub_pulse_template=FPGA_sub_pulse_template,
         sub_offset_slices=OFFSET_SLICES,
         grad_threshold=GRAD_THRESHOLDS[stage],
         cooldown_slices=COOLDOWN_SLICES,
     )
-    adcs.append(remain_sig_vs_t)
     recos.append(reco_arrival_slices)
 
+    if PLOT:
+        fig = splt.figure(splt.FIGURE_16_9)
+        ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
+        ax.plot(remain_sig_vs_t, "k", alpha=0.2)
 
-fig = splt.figure(splt.FIGURE_16_9)
-ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
-
-ax.plot(sig_vs_t, "k", alpha=0.2)
-
-
-ax.plot(adcs[0], "r", alpha=0.2)
-ax.plot(adcs[1], "g", alpha=0.2)
-ax.plot(adcs[2], "b", alpha=0.2)
-# ax.plot(adcs[3], "orange", alpha=0.2)
+        ax.plot(debug["sig_conv_pulse"], "k:")
+        ax.plot(debug["extraction_candidates"], "b", alpha=0.1)
+        ax.plot(debug["extraction"], "r", alpha=0.1)
 
 
-ax.set_xlabel("time / samples")
-ax.set_ylabel("amplitude")
-fig.savefig("fpga_iteration.jpg")
-splt.close_figure(fig)
+        ax.set_ylim([-0.2, 1.2])
+        ax.set_xlabel("time / samples")
+        ax.set_ylabel("amplitude")
+        fig.savefig("spe_{:06d}.jpg".format(stage))
+        splt.close_figure(fig)
+
+    remain_sig_vs_t = next_sig_vs_t
+
+reco_arrival_fpga_slices = np.concatenate(recos)
+reco_arrival_fpga_slices += int(0.8 * OFFSET_SLICES)
+
+fpga_slice_periode = (
+    ANALOG_CONFIG["periode"] * ADC_CONFIG["skips"] / FPGA_CONFIG["adc_repeats"]
+)
+event["reco_arrival_times"] = reco_arrival_fpga_slices * fpga_slice_periode
+event["reco_arrival_times"] = np.sort(event["reco_arrival_times"])
+
+
+performance = []
+for time_delta in fpga_slice_periode*np.arange(25):
+
+    p = spe.benchmark(
+        reco_times=event["reco_arrival_times"],
+        true_times=event["true_arrival_times"],
+        time_delta=time_delta,
+    )
+    p["time_delta"] = time_delta
+    performance.append(p)
+
+if PLOT:
+    spe.plot.plot_event(event=event, path="final.jpg")
