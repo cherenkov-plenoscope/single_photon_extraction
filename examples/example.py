@@ -72,9 +72,10 @@ pt_adc = spe.make_adc_output(
     prng=prng,
 )
 
+fpga_skips = ADC_CONFIG["skips"]//FPGA_CONFIG["adc_repeats"]
 pt_fpga = spe.make_adc_output(
     analog=pt_analog,
-    skips=ADC_CONFIG["skips"]//FPGA_CONFIG["adc_repeats"],
+    skips=fpga_skips,
     amplitude_noise=0.0,
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
