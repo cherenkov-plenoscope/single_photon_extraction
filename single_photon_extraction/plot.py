@@ -34,7 +34,7 @@ def plot_event(
             num_samples=len(event["analog"]),
             periode=event["config"]["analog"]["periode"],
         )
-        ax.plot(analog_timeseries, event["analog"], "k:")
+        ax.plot(analog_timeseries, event["analog"], "k", alpha=0.5)
 
     # adc
     # ---
@@ -57,7 +57,7 @@ def plot_event(
                 num_bits=event["config"]["adc"]["num_bits"],
             ),
             linecolor="orange",
-            linealpha=0.2,
+            linealpha=0.5,
             draw_bin_walls=True,
         )
 
@@ -87,22 +87,5 @@ def plot_event(
     ax.set_ylim(ylim)
     ax.set_xlabel("time / s")
     ax.set_ylabel("amplitude")
-    fig.savefig(path)
-    splt.close_figure(fig)
-
-
-def plot_extraction_state(dig, ADC_FREQUENCY, truth, path, ylim=None):
-    periode = 1.0 / ADC_FREQUENCY
-    fig = splt.figure(splt.FIGURE_16_9)
-    ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
-    splt.ax_add_histogram(
-        ax=ax,
-        bin_edges=make_timeseries(len(dig), periode=periode),
-        bincounts=dig[:-1],
-        linecolor="red",
-        draw_bin_walls=True,
-    )
-    ax.set_ylim(ylim)
-    ax.set_xlabel("time / s")
     fig.savefig(path)
     splt.close_figure(fig)

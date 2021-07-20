@@ -4,10 +4,10 @@ import numpy as np
 import sebastians_matplotlib_addons as splt
 
 
-PLOT = False
+PLOT = True
 
 prng = np.random.Generator(np.random.MT19937(seed=0))
-NUM_SAMPLES = 1000 * 1000
+NUM_SAMPLES = 4 * 1000
 
 NSB_RATE = 5e6
 
@@ -37,12 +37,8 @@ FPGA_CONFIG = {
     "kernel": [],
 }
 
-ADC_FREQUENCY = (1 / ANALOG_CONFIG["periode"]) / ADC_CONFIG["skips"]
-
-FPGA_FREQUENCY = (
-    (1 / ANALOG_CONFIG["periode"])
-    / ADC_CONFIG["skips"]
-    * FPGA_CONFIG["adc_repeats"]
+FPGA_PERIODE = (
+    ANALOG_CONFIG["periode"] * ADC_CONFIG["skips"] / FPGA_CONFIG["adc_repeats"]
 )
 
 
@@ -319,12 +315,19 @@ FPGA_pulse_template = spe.to_analog_level(
     num_bits=FPGA_CONFIG["num_bits"],
 )[5 * FPGA_CONFIG["adc_repeats"] : 11 * FPGA_CONFIG["adc_repeats"]]
 if PLOT:
-    spe.plot.plot_extraction_state(
-        dig=FPGA_pulse_template,
-        ADC_FREQUENCY=FPGA_FREQUENCY,
-        truth=event["true_arrival_times"],
-        path="FPGA_pulse_template.jpg",
+    fig = splt.figure(splt.FIGURE_16_9)
+    ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
+    ax.step(
+        spe.make_timeseries(
+            len(FPGA_pulse_template),
+            periode=FPGA_PERIODE,
+        ),
+        FPGA_pulse_template,
+        "k",
     )
+    ax.set_xlabel("time / s")
+    fig.savefig("FPGA_pulse_template.jpg")
+    splt.close_figure(fig)
 
 
 FPGA_sub_pulse_template = -1.0 * spe.to_analog_level(
@@ -334,12 +337,19 @@ FPGA_sub_pulse_template = -1.0 * spe.to_analog_level(
     num_bits=FPGA_CONFIG["num_bits"],
 )
 if PLOT:
-    spe.plot.plot_extraction_state(
-        dig=FPGA_sub_pulse_template,
-        ADC_FREQUENCY=FPGA_FREQUENCY,
-        truth=event["true_arrival_times"],
-        path="FPGA_spe_sub_pulse_template.jpg",
+    fig = splt.figure(splt.FIGURE_16_9)
+    ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
+    ax.step(
+        spe.make_timeseries(
+            len(FPGA_sub_pulse_template),
+            periode=FPGA_PERIODE
+        ),
+        FPGA_sub_pulse_template,
+        "k",
     )
+    ax.set_xlabel("time / s")
+    fig.savefig("FPGA_spe_sub_pulse_template.jpg")
+    splt.close_figure(fig)
 
 COOLDOWN_SLICES = len(FPGA_sub_pulse_template)
 
@@ -364,12 +374,9 @@ for stage in range(len(GRAD_THRESHOLDS)):
         fig = splt.figure(splt.FIGURE_16_9)
         ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
         ax.plot(remain_sig_vs_t, "k", alpha=0.2)
-
         ax.plot(debug["sig_conv_pulse"], "k:")
         ax.plot(debug["extraction_candidates"], "b", alpha=0.1)
         ax.plot(debug["extraction"], "r", alpha=0.1)
-
-
         ax.set_ylim([-0.2, 1.2])
         ax.set_xlabel("time / samples")
         ax.set_ylabel("amplitude")
@@ -381,16 +388,13 @@ for stage in range(len(GRAD_THRESHOLDS)):
 reco_arrival_fpga_slices = np.concatenate(recos)
 reco_arrival_fpga_slices += int(0.8 * OFFSET_SLICES)
 
-fpga_slice_periode = (
-    ANALOG_CONFIG["periode"] * ADC_CONFIG["skips"] / FPGA_CONFIG["adc_repeats"]
-)
-event["reco_arrival_times"] = reco_arrival_fpga_slices * fpga_slice_periode
+
+event["reco_arrival_times"] = reco_arrival_fpga_slices * FPGA_PERIODE
 event["reco_arrival_times"] = np.sort(event["reco_arrival_times"])
 
 
 performance = []
-for time_delta in fpga_slice_periode*np.arange(25):
-
+for time_delta in FPGA_PERIODE*np.arange(25):
     p = spe.benchmark(
         reco_times=event["reco_arrival_times"],
         true_times=event["true_arrival_times"],
