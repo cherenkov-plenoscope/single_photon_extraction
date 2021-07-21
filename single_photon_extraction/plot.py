@@ -1,5 +1,5 @@
-from single_photon_extraction import *
 import numpy as np
+import single_photon_extraction as spe
 import sebastians_matplotlib_addons as splt
 
 
@@ -30,7 +30,7 @@ def plot_event(
     # analog
     # ------
     if "analog" in event:
-        analog_timeseries = make_timeseries(
+        analog_timeseries = spe.signal.make_timeseries(
             num_samples=len(event["analog"]),
             periode=event["config"]["analog"]["periode"],
         )
@@ -39,7 +39,7 @@ def plot_event(
     # adc
     # ---
     if "adc" in event:
-        adc_timeseries = make_timeseries(
+        adc_timeseries = spe.signal.make_timeseries(
             num_samples=len(event["adc"]),
             periode=(
                 event["config"]["analog"]["periode"]
@@ -50,7 +50,7 @@ def plot_event(
         splt.ax_add_histogram(
             ax=ax,
             bin_edges=adc_timeseries,
-            bincounts=to_analog_level(
+            bincounts=spe.signal.to_analog_level(
                 digital=event["adc"][:-1],
                 amplitude_min=event["config"]["adc"]["amplitude_min"],
                 amplitude_max=event["config"]["adc"]["amplitude_max"],
@@ -64,7 +64,7 @@ def plot_event(
     # fpga
     # ----
     if "fpga" in event:
-        fpga_timeseries = make_timeseries(
+        fpga_timeseries = spe.signal.make_timeseries(
             num_samples=len(event["fpga"]),
             periode=(
                 event["config"]["analog"]["periode"]
@@ -74,7 +74,7 @@ def plot_event(
         )
         ax.step(
             fpga_timeseries,
-            to_analog_level(
+            spe.signal.to_analog_level(
                 digital=event["fpga"],
                 amplitude_min=event["config"]["adc"]["amplitude_min"],
                 amplitude_max=event["config"]["adc"]["amplitude_max"],

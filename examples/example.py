@@ -45,24 +45,24 @@ FPGA_PERIODE = (
 # make pulse template
 # ===================
 
-pt_pulse = spe.make_pulse(
+pt_pulse = spe.signal.make_pulse(
     periode=ANALOG_CONFIG["periode"],
     pulse_amplitude=PULSE_CONFIG["amplitude"],
     pulse_decay_time=PULSE_CONFIG["decay_time"],
 )
-pt_bandwitdh_kernel = spe.make_bell(
+pt_bandwitdh_kernel = spe.signal.make_bell(
     periode=ANALOG_CONFIG["periode"], bell_std=(1 / ANALOG_CONFIG["bandwidth"])
 )
-pt_analog = spe.make_timeseries(
+pt_analog = spe.signal.make_timeseries(
     num_samples=len(pt_pulse) + 200,
     periode=ANALOG_CONFIG["periode"]
 )
-pt_analog = spe.add_first_to_second_at(
+pt_analog = spe.signal.add_first_to_second_at(
     f1=pt_pulse, f2=pt_analog, injection_slices=[200],
 )
 pt_analog = np.convolve(pt_analog, pt_bandwitdh_kernel, mode="same")
 
-pt_adc = spe.make_adc_output(
+pt_adc = spe.signal.make_adc_output(
     analog=pt_analog,
     skips=ADC_CONFIG["skips"],
     amplitude_noise=0.0,
@@ -73,7 +73,7 @@ pt_adc = spe.make_adc_output(
 )
 
 fpga_skips = ADC_CONFIG["skips"]//FPGA_CONFIG["adc_repeats"]
-pt_fpga = spe.make_adc_output(
+pt_fpga = spe.signal.make_adc_output(
     analog=pt_analog,
     skips=fpga_skips,
     amplitude_noise=0.0,
@@ -283,7 +283,7 @@ def fpga_single_extraction_stage(
     extraction_slices = np.where(extraction)[0] - sub_offset_slices
 
     # subtract
-    sig_vs_t_copy = spe.add_first_to_second_at(
+    sig_vs_t_copy = spe.signal.add_first_to_second_at(
         f1=sub_pulse_template,
         f2=sig_vs_t_copy,
         injection_slices=extraction_slices,
@@ -298,7 +298,7 @@ OFFSET_SLICES = 60
 GRAD_THRESHOLDS = 0.4 * np.ones(10)
 
 
-FPGA_sig_vs_t = spe.to_analog_level(
+FPGA_sig_vs_t = spe.signal.to_analog_level(
     digital=event["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
@@ -308,7 +308,7 @@ ramp_slices = 100
 ramp = np.linspace(0, 1, ramp_slices)
 FPGA_sig_vs_t[0:ramp_slices] = FPGA_sig_vs_t[0:ramp_slices] * ramp
 
-FPGA_pulse_template = spe.to_analog_level(
+FPGA_pulse_template = spe.signal.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
@@ -318,7 +318,7 @@ if PLOT:
     fig = splt.figure(splt.FIGURE_16_9)
     ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
     ax.step(
-        spe.make_timeseries(
+        spe.signal.make_timeseries(
             len(FPGA_pulse_template),
             periode=FPGA_PERIODE,
         ),
@@ -330,7 +330,7 @@ if PLOT:
     splt.close_figure(fig)
 
 
-FPGA_sub_pulse_template = -1.0 * spe.to_analog_level(
+FPGA_sub_pulse_template = -1.0 * spe.signal.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
@@ -340,7 +340,7 @@ if PLOT:
     fig = splt.figure(splt.FIGURE_16_9)
     ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
     ax.step(
-        spe.make_timeseries(
+        spe.signal.make_timeseries(
             len(FPGA_sub_pulse_template),
             periode=FPGA_PERIODE
         ),
