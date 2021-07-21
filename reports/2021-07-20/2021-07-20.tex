@@ -100,8 +100,10 @@ Table \ref{TabInstrumentsNsbRates} shows the expected rates of night-sky-photons
 \centering%
 \includegraphics[width=1.0\linewidth]{night_sky_background.jpg}%
 \caption{
-The typical flux $F_\text{Night}$ of night-sky-light \cite{gaug2013night},
-extrapolated from 700 - 1000\,nm. Dotted line is \cite{preuss2002study}.
+The typical flux $F_\text{Night}$ of night-sky-light \cite{gaug2013night}.
+Dotted line is \cite{preuss2002study}.
+Gray line is a simulated and arbitrarily scaled Cherenkov-spectrum of a 5\,GeV gamma-ray in Chile at 5\,km a.s.l.
+All extrapolated from 700 - 1000\,nm.
 }%
 \label{fig:nsb}
 \end{figure}
@@ -110,7 +112,7 @@ extrapolated from 700 - 1000\,nm. Dotted line is \cite{preuss2002study}.
 \centering%
 \includegraphics[width=1.0\linewidth]{photon_efficiency.jpg}%
 \caption{
-Dotted line is silicon-photo-multiplier (SiPM) \cite{hamamatsu2009mppc},
+Dotted line is silicon-photo-multiplier (SiPM), shape according to \cite{hamamatsu2009mppc}, and scaling according to \cite{anderhub2013design}.
 Extrapolated from 700 - 1000\,nm.
 Dashed line is photo-multiplier-tube (PMT) \cite{toyama2013novel}
 }%
@@ -142,10 +144,47 @@ The observations of FACT, taken from Sebastian's phd-thesis.
   \end{center}
 \end{table}
 %
+\subsection*{Filtering out night-sky-light}%
+\label{SubSecFilteringOutNightSkyLight}%
+%
+Mirrors, lenses, and windows can provide additional filtering of reddish night-sky-light, see Figure \ref{FigNsbFilter}.
+%
+Table \ref{TabFilters} shows the rate $R$ for night-sky-photons when the sensors are behind mirrors and/or transmissive filters.
+%
+\begin{figure}[H]%
+\centering%
+\includegraphics[width=1.0\linewidth]{nsb_filters.jpg}%
+\caption{
+Dashed line is CTA's dielectric mirror for the MST, after degrading \cite{pareschi2013status,pareschi2013statusarxiv}.
+%
+Dotted line is VERITAS' night-sky-filter \cite{archambault2017gamma}.
+%
+Both Extrapolated from 700\,nm to 1000\,nm.
+}%
+\label{FigNsbFilter}
+\end{figure}
+%
+\begin{table}[H]
+  \begin{center}
+    \begin{tabular}{cccrr}
+              & \footnotesize{mirror} & \footnotesize{filter} & $R_\text{nsb}$ /   & $\eta_\text{Cer.}$ / \\
+              &        &        & \footnotesize{$10^6\,\text{m}^{-2}\,(1^\circ)^{-2}\,\text{s}^{-1}$} & \footnotesize{$10^{-3}$} \\
+        \hline
+        PMT &             &             & 144.8 & 213\\
+        .   & $\bullet{}$ &             & 135.8 & 206\\
+        .   & $\bullet{}$ & $\bullet{}$ &  15.9 &  53\\
+        \hline
+        SiPM &             &             & 280.3 & 198\\
+        .    & $\bullet{}$ &             & 188.5 & 176\\
+        .    & $\bullet{}$ & $\bullet{}$ &   7.1 &  24\\
+    \end{tabular}
+    \caption{}
+    \label{TabFilters}
+  \end{center}
+\end{table}
+%
 \section*{Simulating}%
 \label{SecSimulating}%
-%
-
 %
 \bibliographystyle{apalike}%
 \bibliography{references}%
