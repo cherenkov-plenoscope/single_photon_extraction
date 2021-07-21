@@ -33,20 +33,20 @@
 \begin{document}%
 \maketitle%
 
-\newcommand{\F}{F_\text{night-sky-background}}
-\newcommand{\Ftyp}{F_\text{dark-night}}
+\newcommand{\F}{F_\text{nsb}}
+\newcommand{\Ftyp}{F_\text{typical}}
 \begin{multicols}{2}%
 %
-The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle from the Cherenkov-light emitted by an air-shower.
-%
-Photo-sensors and read-out are cost-drivers.
+The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle from the Cherenkov-light emitted in air-showers.
 %
 Instruments must sense blueish Cherenkov-light, better reject reddish night-sky-light, and must reconstruct the arrival-times of the photons with $\sim{}$5\,ns resolution.
+%
+Photo-sensors and read-out are cost-drivers of the method.
 \newline
 %
 We expect a continues read-out into digital buffers, where each individual photon is recorded, to be beneficial for the atmospheric Cherenkov-method as it allows fast computational access to all observables.
 %
-We expect such a read-out to lower the energy-threshold, to improve the separation of Cherenkov- from night-sky-light, and to improve the reconstruction of the cosmic particle \cite{jung2005star,catalano2008single}.
+We expect such a read-out to lower the energy-threshold \cite{jung2005star}, to improve the separation of Cherenkov- from night-sky-light, and to improve the reconstruction of the cosmic particle \cite{catalano2008single}.
 \newline
 %
 One way of continues read-out are flash analog-digital-converters (ADC)s.
@@ -54,45 +54,73 @@ One way of continues read-out are flash analog-digital-converters (ADC)s.
 However, their cost and power-consumption scale rapidly with their sampling frequency $f$.
 %
 \begin{eqnarray*}
-C_\text{ADC}(f) &\sim& f^2,\\
-P_\text{ADC}(f) &\sim& f^2.
+\text{Cost} &\sim& f^2,\\
+\text{Power} &\sim& f^2.
 \end{eqnarray*}
 %
-In this report, we explore the usage of many slow ($f$ < 100\,MHz) ADCs.
+In this report, we explore a possible read-out with many slow \mbox{($f$ < 100\,MHz)} ADCs.
 %
-We want each ADC to digitizes the signal of a photo-sensor with only little acceptance and thus a small rate of night-sky-photons.
+We want each slow ADC to digitizes the signal of a photo-sensor that have only little acceptances (area and solid angle) and thus a low rate of night-sky-photons.
 %
-We hope that when the photo-sensor's acceptance (area and solid angle) is small enough, and thus its rate of night-sky-photons is small, than a slow ADC in combination with a little computing will be able to reconstruct the arrival times of the individual photons sufficiently accurate.
+We hope that when the photo-sensor's rate of night-sky-photons is low, a slow ADC in combination with a little computing will be able to reconstruct the arrival-times of the individual photons sufficiently accurate, i.e. better than the sampling period $1/f$.
 %
-Since the cost of silicon photo-sensors are almost only proportional to their acceptance, there is no cost overhead when replacing a big sensor with multiple small ones.
+Since the cost of silicon photo-sensors are mostly proportional to their area, there is only little cost overhead when replacing a big sensor with multiple small ones.
 %
-Since our ADCs run slow, their power-consumption and cost might still be competitive despite their large number.
+Due to the rapid scaling of the ADC's demands with sampling frequency $f$, many slow ADCs might outperform fewer fast ADCs in both power-consumption and cost.
+\newline
+Further, the finer binning of photo-sensors might allow the implementation of small aperture (< 100\,m$^2$) plenoscopes covering large ($> 300\,(1^\circ{})^2$) field-of-views due to computational compensation of optical aberrations. \cite{mueller2019phd}.
 %
 \section*{Sensing Night-Sky-Photons}%
 \label{sec:nsb}%
 %
-Typical photo-sensors in the atmospheric-Cherenkov method yield night-sky-photon-rates of
+Table \ref{TabFilters} shows the relative yield $\eta_\text{Cer.}$ of Cherenkov-light, and the resulting rate $R_\text{nsb}$ of night-sky-photons for typical photo-sensors.
+%
+\begin{table}[H]
+  \begin{center}
+    \begin{tabular}{cccrr}
+%
+        \footnotesize{sensor} &
+        \footnotesize{mirror} &
+        \footnotesize{filter} &
+        $R_\text{nsb}$ /   &
+        $\eta_\text{Cer.}$ / \\
+%
+        &
+        &
+        &
+        \footnotesize{$10^6\,\text{m}^{-2}\,(1^\circ)^{-2}\,\text{s}^{-1}$} &
+        \footnotesize{$10^{-3}$} \\
+%
+        \hline
+        PMT &             &             & 144.8 & 213\\
+        .   & $\bullet{}$ &             & 135.8 & 206\\
+        .   & $\bullet{}$ & $\bullet{}$ &  15.9 &  53\\
+        \hline
+        SiPM &             &             & 280.3 & 198\\
+        .    & $\bullet{}$ &             & 188.5 & 176\\
+        .    & $\bullet{}$ & $\bullet{}$ &   7.1 &  24\\
+    \end{tabular}
+    \caption{
+The rates and yields result out of the typical flux of night-sky-light $\Ftyp{}$, see Figure \ref{fig:nsb}, the sensors detection-efficiencies, see Figure \ref{fig:pde}, and the efficiencies of a  mirror and a filter, see Figure \ref{FigNsbFilter}.
+    }
+    \label{TabFilters}
+  \end{center}
+\end{table}
+%
+The typical flux of night-sky-light corresponds to a sky surface brightness of
+%
 \begin{eqnarray*}
-R_\text{PMT} &=& 144.8\times10^6\,\text{m}^{-2}\,(1^\circ)^{-2}\,\text{s}^{-1}\\
-R_\text{SiPM} &=& 280.3\times10^6\,\text{m}^{-2}\,(1^\circ)^{-2}\,\text{s}^{-1}.
+\Ftyp{} &\hat{=}& 21\,\text{mag}\,\text{arcsec}^{-2}.
 \end{eqnarray*}
 %
-The rates result out of the typical flux $\F{}$ during observations, see Figure \ref{fig:nsb}, and the corresponding photon-detection-efficiencies, see Figure \ref{fig:pde}.
-%
-The typical flux  corresponds to a sky surface brightness of
-%
+Most observations take place in the range of fluxes from
 \begin{eqnarray*}
-\F{} &\hat{=}& 21\,\text{mag}\,\text{arcsec}^{-2}.
+\approx{}0.8 &> \F{} / \Ftyp{} >& \approx{}3.
 \end{eqnarray*}
 %
-Observations take place in the range of fluxes from
-\begin{eqnarray*}
-0.8 &> \F{} / \Ftyp{} >& 3.
-\end{eqnarray*}
+Figure \ref{fig:obstimeFact} shows the distribution of $\F{}$ with a special Cherenkov-telescope FACT which pioneered observations in the brightest full moon conditions using robust silicon photo-sensors.
 %
-New moon, full moon, and clouds all impact $\F{}$.
-%
-Figure \ref{fig:obstimeFact} shows the flux distribution during observations with a Cherenkov-telescope which tried hard to observe in the brightest conditions using silicon photo-sensors which can tolerate this stress.
+Even with FACT observations beyond $\F{} / \Ftyp{} = 5$ are rare.
 %
 Table \ref{TabInstrumentsNsbRates} shows the expected rates of night-sky-photons in different instruments.
 %
@@ -121,6 +149,19 @@ Dashed line is photo-multiplier-tube (PMT) \cite{toyama2013novel}
 %
 \begin{figure}[H]%
 \centering%
+\includegraphics[width=1.0\linewidth]{nsb_filters.jpg}%
+\caption{
+Dashed line is CTA's dielectric mirror for the MST, after degrading \cite{pareschi2013status,pareschi2013statusarxiv}.
+%
+Dotted line is VERITAS' night-sky-filter \cite{archambault2017gamma}.
+%
+Both Extrapolated from 700\,nm to 1000\,nm.
+}%
+\label{FigNsbFilter}
+\end{figure}
+%
+\begin{figure}[H]%
+\centering%
 \includegraphics[width=1.0\linewidth]{observation_time_histogram.png}%
 \caption{
 The observations of FACT, taken from Sebastian's phd-thesis.
@@ -141,45 +182,6 @@ The observations of FACT, taken from Sebastian's phd-thesis.
     \end{tabular}
     \caption{Expected rates of night-sky-photons $R$ in an individual read-out-channel (pixel or lixel).}
     \label{TabInstrumentsNsbRates}
-  \end{center}
-\end{table}
-%
-\subsection*{Filtering out night-sky-light}%
-\label{SubSecFilteringOutNightSkyLight}%
-%
-Mirrors, lenses, and windows can provide additional filtering of reddish night-sky-light, see Figure \ref{FigNsbFilter}.
-%
-Table \ref{TabFilters} shows the rate $R$ for night-sky-photons when the sensors are behind mirrors and/or transmissive filters.
-%
-\begin{figure}[H]%
-\centering%
-\includegraphics[width=1.0\linewidth]{nsb_filters.jpg}%
-\caption{
-Dashed line is CTA's dielectric mirror for the MST, after degrading \cite{pareschi2013status,pareschi2013statusarxiv}.
-%
-Dotted line is VERITAS' night-sky-filter \cite{archambault2017gamma}.
-%
-Both Extrapolated from 700\,nm to 1000\,nm.
-}%
-\label{FigNsbFilter}
-\end{figure}
-%
-\begin{table}[H]
-  \begin{center}
-    \begin{tabular}{cccrr}
-              & \footnotesize{mirror} & \footnotesize{filter} & $R_\text{nsb}$ /   & $\eta_\text{Cer.}$ / \\
-              &        &        & \footnotesize{$10^6\,\text{m}^{-2}\,(1^\circ)^{-2}\,\text{s}^{-1}$} & \footnotesize{$10^{-3}$} \\
-        \hline
-        PMT &             &             & 144.8 & 213\\
-        .   & $\bullet{}$ &             & 135.8 & 206\\
-        .   & $\bullet{}$ & $\bullet{}$ &  15.9 &  53\\
-        \hline
-        SiPM &             &             & 280.3 & 198\\
-        .    & $\bullet{}$ &             & 188.5 & 176\\
-        .    & $\bullet{}$ & $\bullet{}$ &   7.1 &  24\\
-    \end{tabular}
-    \caption{}
-    \label{TabFilters}
   \end{center}
 \end{table}
 %
