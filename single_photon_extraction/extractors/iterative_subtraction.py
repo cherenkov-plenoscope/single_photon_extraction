@@ -43,14 +43,12 @@ def one_stage(
     )
     DEBUG["sig_conv_pulse"] = sig_conv_pulse
 
-    extraction_candidates = (sig_conv_pulse > threshold).astype(
-        np.int
-    )
+    extraction_candidates = (sig_conv_pulse > threshold).astype(np.int)
     DEBUG["extraction_candidates"] = extraction_candidates
 
     cooldown, extraction = timeseries_apply_cooldown(
         timeseries=extraction_candidates,
-        num_cooldown_slices=num_cooldown_slices
+        num_cooldown_slices=num_cooldown_slices,
     )
     DEBUG["cooldown"] = cooldown
 
@@ -83,10 +81,14 @@ def apply(sampling_periode, sig, config):
     for stage in range(num_stages):
         next_sig, stage_reco_arrival_slices, stage_debug = one_stage(
             sig_vs_t=remain_sig,
-            min_amplitude_to_subtract_from=config["min_amplitude_to_subtract_from"],
+            min_amplitude_to_subtract_from=config[
+                "min_amplitude_to_subtract_from"
+            ],
             pulse_rising_edge_template=config["pulse_rising_edge_template"],
             subtraction_pulse_template=config["subtraction_pulse_template"],
-            num_subtraction_offset_slices=config["num_subtraction_offset_slices"],
+            num_subtraction_offset_slices=config[
+                "num_subtraction_offset_slices"
+            ],
             threshold=config["stage_thresholds"][stage],
             num_cooldown_slices=config["num_cooldown_slices"],
         )
@@ -96,8 +98,12 @@ def apply(sampling_periode, sig, config):
 
         remain_sig = next_sig
 
-    all_reco_arrival_slices = np.concatenate(DEBUG["stage_reco_arrival_slices"])
-    all_reco_arrival_slices += int(0.5 * config["num_subtraction_offset_slices"])
+    all_reco_arrival_slices = np.concatenate(
+        DEBUG["stage_reco_arrival_slices"]
+    )
+    all_reco_arrival_slices += int(
+        0.5 * config["num_subtraction_offset_slices"]
+    )
 
     all_reco_arrival_times = all_reco_arrival_slices * sampling_periode
     all_reco_arrival_times = np.sort(all_reco_arrival_times)

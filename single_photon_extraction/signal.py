@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def make_timeseries(num_samples, periode, time_start=0.0):
     return np.linspace(
         time_start,
@@ -85,23 +86,29 @@ def make_lowpass_kernel(periode, lowpass_cutoff_frequency):
     kernel = make_bell(
         periode=periode,
         bell_std=(
-            scaling_to_let_the_gain_go_down_to_one_half_at_cutoff_frequency /
-            lowpass_cutoff_frequency
-        )
+            scaling_to_let_the_gain_go_down_to_one_half_at_cutoff_frequency
+            / lowpass_cutoff_frequency
+        ),
     )
     return kernel
 
+
 def make_analog_output(periode, perfect, lowpass_cutoff_frequency):
     kernel = make_lowpass_kernel(
-        periode=periode,
-        lowpass_cutoff_frequency=lowpass_cutoff_frequency
+        periode=periode, lowpass_cutoff_frequency=lowpass_cutoff_frequency
     )
     analog = np.convolve(perfect, kernel, mode="same")
     return analog
 
 
 def make_adc_output(
-    analog, skips, amplitude_noise, amplitude_min, amplitude_max, num_bits, prng,
+    analog,
+    skips,
+    amplitude_noise,
+    amplitude_min,
+    amplitude_max,
+    num_bits,
+    prng,
 ):
     sample_slices = np.arange(0, len(analog), skips)
     out = analog[sample_slices]
@@ -121,13 +128,12 @@ def make_adc_output(
     out = out / (amplitude_max - amplitude_min)
 
     # extend to bit range
-    out = out * (2**num_bits)
+    out = out * (2 ** num_bits)
     return out.astype(np.int)
 
 
 def make_fpga_output(
-    adc, fpga_adc_repeats, fpga_kernel,
-    fpga_num_bits, adc_num_bits
+    adc, fpga_adc_repeats, fpga_kernel, fpga_num_bits, adc_num_bits
 ):
     fpga = np.repeat(adc, repeats=fpga_adc_repeats)
     if len(fpga_kernel) > 0:
@@ -135,15 +141,13 @@ def make_fpga_output(
         fpga = fpga / np.sum(fpga_kernel)
 
     # bit range
-    fpga = fpga * (2**(fpga_num_bits - adc_num_bits))
+    fpga = fpga * (2 ** (fpga_num_bits - adc_num_bits))
     return fpga
 
 
-def to_analog_level(
-    digital, amplitude_min, amplitude_max, num_bits
-):
+def to_analog_level(digital, amplitude_min, amplitude_max, num_bits):
     ana = digital.astype(np.float)
-    ana /= (2**num_bits - 1)
+    ana /= 2 ** num_bits - 1
     ana *= amplitude_max - amplitude_min
     ana += amplitude_min
     return ana
@@ -155,5 +159,5 @@ def power_spectrum(periode, sig_vs_t):
     idx = np.argsort(freq)
     freq = freq[idx]
     spec = spec[idx]
-    spec = np.sqrt(np.real(spec)**2.0 + np.imag(spec)**2.0)
+    spec = np.sqrt(np.real(spec) ** 2.0 + np.imag(spec) ** 2.0)
     return freq, spec

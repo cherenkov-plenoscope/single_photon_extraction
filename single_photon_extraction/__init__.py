@@ -34,9 +34,7 @@ def benchmark(reco_times, true_times, time_delta):
             match = find_nearest(reco_times_remaining, true_time)
             distance = np.abs(reco_times_remaining[match] - true_time)
             if distance <= time_delta:
-                reco_times_remaining = np.delete(
-                    reco_times_remaining, match
-                )
+                reco_times_remaining = np.delete(reco_times_remaining, match)
                 bench["tp"] += 1
             else:
                 bench["fn"] += 1
@@ -48,24 +46,23 @@ def analyse_benchmark(tp, tn, fp, fn):
     true_positive_rate = tp / (tp + fn)
     D_tp = np.sqrt(tp)
     D_fn = np.sqrt(fn)
-    dS_dtp = fn/(tp + fn)**2
-    dS_dfn =-tp/(tp + fn)**2
+    dS_dtp = fn / (tp + fn) ** 2
+    dS_dfn = -tp / (tp + fn) ** 2
     true_positive_rate_unc = np.sqrt(
-        (dS_dtp**2)*(D_tp**2) +
-        (dS_dfn**2)*(D_fn**2)
+        (dS_dtp ** 2) * (D_tp ** 2) + (dS_dfn ** 2) * (D_fn ** 2)
     )
     false_negative_rate = fp / (tp + fn)
     D_fp = np.sqrt(fp)
     D_tp = np.sqrt(tp)
     D_fn = np.sqrt(fn)
 
-    dM_dfp = 1/(tp + fn)
-    dM_dtp = -fp/(tp+fn)**2
-    dM_dfn = -fp/(tp+fn)**2
+    dM_dfp = 1 / (tp + fn)
+    dM_dtp = -fp / (tp + fn) ** 2
+    dM_dfn = -fp / (tp + fn) ** 2
     false_negative_rate_unc = np.sqrt(
-        (dM_dfp**2)*(D_fp**2) +
-        (dM_dtp**2)*(D_tp**2) +
-        (dM_dfn**2)*(D_fn**2)
+        (dM_dfp ** 2) * (D_fp ** 2)
+        + (dM_dtp ** 2) * (D_tp ** 2)
+        + (dM_dfn ** 2) * (D_fn ** 2)
     )
     return {
         "true_positive_rate_mean": true_positive_rate,
@@ -98,7 +95,9 @@ def make_night_sky_background_event(
     true_arrival_times = draw_poisson_arrival_times(
         exposure_time=exposure_time, frequency=nsb_rate, prng=prng,
     )
-    true_arrival_slices = (true_arrival_times / analog_config["periode"]).astype(np.int)
+    true_arrival_slices = (
+        true_arrival_times / analog_config["periode"]
+    ).astype(np.int)
     true_arrival_times = analog_config["periode"] * true_arrival_slices
 
     perfect = np.zeros(num_samples)
@@ -109,7 +108,8 @@ def make_night_sky_background_event(
         )
 
         dec = prng.normal(
-            loc=pulse_config["decay_time"], scale=pulse_config["decay_time_std"]
+            loc=pulse_config["decay_time"],
+            scale=pulse_config["decay_time_std"],
         )
 
         p = signal.make_pulse(
