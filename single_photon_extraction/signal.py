@@ -81,7 +81,7 @@ def add_first_to_second_at(f1, f2, injection_slices):
 
 
 def make_analog_output(periode, perfect, lowpass_cutoff_frequency):
-    scaling_to_let_the_gain_go_down_to_one_half_at_cutoff_frequency = 0.2
+    scaling_to_let_the_gain_go_down_to_one_half_at_cutoff_frequency = 0.19
     bandwitdh_kernel = make_bell(
         periode=periode,
         bell_std=(
