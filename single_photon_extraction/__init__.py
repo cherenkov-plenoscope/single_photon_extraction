@@ -44,10 +44,40 @@ def benchmark(reco_times, true_times, time_delta):
     return bench
 
 
+def analyse_benchmark(tp, tn, fp, fn):
+    true_positive_rate = tp / (tp + fn)
+    D_tp = np.sqrt(tp)
+    D_fn = np.sqrt(fn)
+    dS_dtp = fn/(tp + fn)**2
+    dS_dfn =-tp/(tp + fn)**2
+    true_positive_rate_unc = np.sqrt(
+        (dS_dtp**2)*(D_tp**2) +
+        (dS_dfn**2)*(D_fn**2)
+    )
+    false_negative_rate = fp / (tp + fn)
+    D_fp = np.sqrt(fp)
+    D_tp = np.sqrt(tp)
+    D_fn = np.sqrt(fn)
+
+    dM_dfp = 1/(tp + fn)
+    dM_dtp = -fp/(tp+fn)**2
+    dM_dfn = -fp/(tp+fn)**2
+    false_negative_rate_unc = np.sqrt(
+        (dM_dfp**2)*(D_fp**2) +
+        (dM_dtp**2)*(D_tp**2) +
+        (dM_dfn**2)*(D_fn**2)
+    )
+    return {
+        "true_positive_rate_mean": true_positive_rate,
+        "true_positive_rate_uncertainty": true_positive_rate_unc,
+        "false_negative_rate_mean": false_negative_rate,
+        "false_negative_rate_uncertainty": false_negative_rate_unc,
+    }
+
+
 def make_night_sky_background_event(
     num_samples,
-    analog_periode,
-    analog_bandwidth,
+    analog_config,
     pulse_config,
     adc_config,
     fpga_config,
@@ -55,21 +85,21 @@ def make_night_sky_background_event(
     prng,
 ):
     assert num_samples > 0
-    assert analog_periode > 0
-    assert analog_bandwidth > 0
+    assert analog_config["periode"] > 0
+    assert analog_config["bandwidth"] > 0
 
     assert pulse_config["amplitude_std"] >= 0
     assert pulse_config["decay_time"] >= 0
 
     assert nsb_rate >= 0
 
-    exposure_time = num_samples * analog_periode
+    exposure_time = num_samples * analog_config["periode"]
 
     true_arrival_times = draw_poisson_arrival_times(
         exposure_time=exposure_time, frequency=nsb_rate, prng=prng,
     )
-    true_arrival_slices = (true_arrival_times / analog_periode).astype(np.int)
-    true_arrival_times = analog_periode * true_arrival_slices
+    true_arrival_slices = (true_arrival_times / analog_config["periode"]).astype(np.int)
+    true_arrival_times = analog_config["periode"] * true_arrival_slices
 
     perfect = np.zeros(num_samples)
 
@@ -84,7 +114,7 @@ def make_night_sky_background_event(
 
         p = signal.make_pulse(
             num_samples=None,
-            periode=analog_periode,
+            periode=analog_config["periode"],
             pulse_amplitude=amp,
             pulse_decay_time=dec,
         )
@@ -94,9 +124,9 @@ def make_night_sky_background_event(
         )
 
     analog = signal.make_analog_output(
-        periode=analog_periode,
+        periode=analog_config["periode"],
         perfect=perfect,
-        lowpass_cutoff_frequency=analog_bandwidth,
+        lowpass_cutoff_frequency=analog_config["bandwidth"],
     )
 
     adc = signal.make_adc_output(
@@ -123,10 +153,7 @@ def make_night_sky_background_event(
         "adc": adc,
         "fpga": fpga,
         "config": {
-            "analog": {
-                "periode": analog_periode,
-                "bandwidth": analog_bandwidth,
-            },
+            "analog": analog_config,
             "adc": adc_config,
             "fpga": fpga_config,
         },
