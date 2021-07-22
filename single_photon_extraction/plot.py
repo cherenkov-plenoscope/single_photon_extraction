@@ -3,17 +3,7 @@ import single_photon_extraction as spe
 import sebastians_matplotlib_addons as splt
 
 
-def plot_event(
-    event,
-    path,
-    figstyle=splt.FIGURE_16_9,
-    axspan=[0.1, 0.1, 0.8, 0.8],
-    ylim=None,
-):
-
-    fig = splt.figure(figstyle)
-    ax = splt.add_axes(fig, axspan)
-
+def ax_add_event(ax, event):
     # truth
     # -----
     if "true_arrival_times" in event:
@@ -83,9 +73,4 @@ def plot_event(
             "red",
         )
 
-
-    ax.set_ylim(ylim)
-    ax.set_xlabel("time / s")
-    ax.set_ylabel("amplitude")
-    fig.savefig(path)
-    splt.close_figure(fig)
+    return ax

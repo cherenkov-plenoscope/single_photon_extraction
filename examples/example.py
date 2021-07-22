@@ -98,7 +98,14 @@ ptemp = {
 }
 
 if PLOT:
-    spe.plot.plot_event(event=ptemp, path="pulse_template.jpg")
+    fig = splt.figure(PLOT_FIGSTYLE)
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
+    spe.plot.ax_add_event(ax=ax, event=ptemp)
+    ax.set_xlabel("frequency / Hz")
+    ax.set_ylabel("gain / 1")
+    fig.savefig("pulse_template.jpg")
+    splt.close_figure(fig)
+
 
 # plot analog bandwidth
 # ---------------------
@@ -163,7 +170,13 @@ event = spe.make_night_sky_background_event(
 )
 
 if PLOT:
-    spe.plot.plot_event(event, path="event.jpg")
+    fig = splt.figure(PLOT_FIGSTYLE)
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
+    spe.plot.ax_add_event(ax=ax, event=event)
+    ax.set_xlabel("frequency / Hz")
+    ax.set_ylabel("gain / 1")
+    fig.savefig("event.jpg")
+    splt.close_figure(fig)
 
 
 MIN_BASELINE_AMPLITUDE = -0.1 * PULSE_CONFIG["amplitude"]
@@ -188,8 +201,8 @@ FPGA_pulse_template = spe.signal.to_analog_level(
     num_bits=FPGA_CONFIG["num_bits"],
 )[5 * FPGA_CONFIG["adc_repeats"] : 11 * FPGA_CONFIG["adc_repeats"]]
 if PLOT:
-    fig = splt.figure(splt.FIGURE_16_9)
-    ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
+    fig = splt.figure(PLOT_FIGSTYLE)
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
     ax.step(
         spe.signal.make_timeseries(
             len(FPGA_pulse_template),
@@ -210,8 +223,8 @@ FPGA_sub_pulse_template = -1.0 * spe.signal.to_analog_level(
     num_bits=FPGA_CONFIG["num_bits"],
 )
 if PLOT:
-    fig = splt.figure(splt.FIGURE_16_9)
-    ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
+    fig = splt.figure(PLOT_FIGSTYLE)
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
     ax.step(
         spe.signal.make_timeseries(
             len(FPGA_sub_pulse_template),
@@ -244,8 +257,8 @@ for stage in range(len(GRAD_THRESHOLDS)):
     recos.append(reco_arrival_slices)
 
     if PLOT:
-        fig = splt.figure(splt.FIGURE_16_9)
-        ax = splt.add_axes(fig, [0.1, 0.1, 0.8, 0.8])
+        fig = splt.figure(PLOT_FIGSTYLE)
+        ax = splt.add_axes(fig, PLOT_AXSPAN)
         ax.plot(remain_sig_vs_t, "k", alpha=0.2)
         ax.plot(debug["sig_conv_pulse"], "k:")
         ax.plot(debug["extraction_candidates"], "b", alpha=0.1)
@@ -277,4 +290,10 @@ for time_delta in FPGA_PERIODE*np.arange(25):
     performance.append(p)
 
 if PLOT:
-    spe.plot.plot_event(event=event, path="final.jpg")
+    fig = splt.figure(PLOT_FIGSTYLE)
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
+    spe.plot.ax_add_event(ax=ax, event=event)
+    ax.set_xlabel("frequency / Hz")
+    ax.set_ylabel("gain / 1")
+    fig.savefig("final.jpg")
+    splt.close_figure(fig)
