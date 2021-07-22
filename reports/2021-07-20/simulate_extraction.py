@@ -461,12 +461,26 @@ for n in range(num_nsb_rates):
             color="k",
             linestyle=extraction_methods[mk]["linestyle"],
         )
+        ax.fill_between(
+            x=1e9 * time_deltas,
+            y1=pvnsb[n][mk]["true_positive_rate_mean"] - pvnsb[n][mk]["true_positive_rate_uncertainty"],
+            y2=pvnsb[n][mk]["true_positive_rate_mean"] + pvnsb[n][mk]["true_positive_rate_uncertainty"],
+            facecolor="k",
+            alpha=0.1,
+        )
         ax.plot(
             1e9 * time_deltas,
             pvnsb[n][mk]["false_negative_rate_mean"],
             color="k",
             linestyle=extraction_methods[mk]["linestyle"],
             alpha=0.33
+        )
+        ax.fill_between(
+            x=1e9 * time_deltas,
+            y1=pvnsb[n][mk]["false_negative_rate_mean"] - pvnsb[n][mk]["false_negative_rate_uncertainty"],
+            y2=pvnsb[n][mk]["false_negative_rate_mean"] + pvnsb[n][mk]["false_negative_rate_uncertainty"],
+            facecolor="k",
+            alpha=0.1,
         )
         ax.set_ylim([-0.05, +1.05])
         if n != 0:
@@ -485,6 +499,6 @@ for n in range(num_nsb_rates):
 
     if n == 0:
         ax.set_ylabel("TPR and FNR / 1")
-        ax.set_xlabel("time-delta / ns")
+        ax.set_xlabel("coincidence-interval / ns")
 fig.savefig("performance.jpg")
 splt.close_figure(fig)

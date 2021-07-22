@@ -24,11 +24,10 @@
 \usepackage{float}%
 \usepackage{verbatim}%
 \title{
-    Reconstructing Arrival-Times of individual Photons
-    in a continous Stream of Night-Sky-Light
+    Reconstructing Arrival-Times of individual Night-Sky-Photons using many small Photo-Sensors and slow Read-Out.
 }%
-\author{Sebastian A. Mueller}%
-\date{}%
+\author{Sebastian A. Mueller, Thomas Kihm, and Werner Hofmann}%
+\date{\today{}}%
 %
 \begin{document}%
 \maketitle%
@@ -119,7 +118,7 @@ The typical flux of night-sky-light corresponds to a sky surface brightness of
 %
 Most observations take place in the range of fluxes from
 \begin{eqnarray*}
-\approx{}0.8 &> \F{} / \Ftyp{} >& \approx{}3.
+\approx{}0.8 &> \F{} / \Ftyp{} >& \approx{}4.
 \end{eqnarray*}
 %
 Figure \ref{fig:obstimeFact} shows the distribution of $\F{}$ with a special Cherenkov-telescope FACT which pioneered observations in the brightest full moon conditions using robust silicon photo-sensors.
@@ -202,6 +201,41 @@ Our readout is designed around an ADC with a sampling-rate $\fadc{}=83.3$\,MHz a
 %
 Table \ref{TabReadOutConfig} shows the configuration of our read-out.
 %
+\begin{table}[H]
+    \begin{center}
+        \begin{tabular}{lr}
+            Analog path & \\
+            \hline
+            low-pass' cut-off & $\fadc{}/2 = 41.7$\,MHz\\
+            &\\
+            Pulse & \\
+            \hline
+            decay-time mean & $50$\,ns\\
+            decay-time std. dev. & $1$\,ns\\
+            amplitude mean & 1.00\\
+            amplitude std. dev. & 0.01\\
+            amplitude low-pass $\Apulse{}$ & 0.81\\
+            &\\
+            ADC & \\
+            \hline
+            sampling-frequency $\fadc{}$ &$83.3$\,MHz\\
+            noise-amplitude & $0.1\Apulse{} = 0.08$\\
+            amplitude min. & $-0.8\Apulse{} = -0.65$\\
+            amplitude max. & $+12.0\Apulse{} = +9.83$\\
+            resolution & 8\,bit\\
+            &\\
+            Processing & \\
+            \hline
+            sampling-frequency $\fproc{}$& $6\fadc{} = 500.0$\,MHz\\
+            resolution & 10\,bit\\
+        \end{tabular}
+        \caption{%
+The configuration of the simulated read-out. The spread of decay-times and amplitudes for the pulse are taken from the author's experience with the SiPMs and gain-feedback of FACT, and are negligible. See also \cite{fact-performance}.
+}
+        \label{TabReadOutConfig}
+    \end{center}
+\end{table}
+%
 \subsection*{Analog path}%
 %
 The analog path of our read-out is designed to match $\fadc{}$ with a gain that drops down to 1/2 (-3dB) at the ADC's Nyquist-frequency $f = \fadc{}/2$, see Figure \ref{FigSimAnalogTransmission}.
@@ -248,7 +282,7 @@ The second algorithm also convolves the signal with the template of the pulse's 
 %
 But it does not take the current pulse into account when the decay of an earlier pulse effects the current pulse.
 %
-When a leading pulse is found, its arrival-time is exported, and the pulse is subtracted from the signal using a predefined template.
+When a leading, unaffected pulse is found, its arrival-time is exported, and the pulse is subtracted from the signal using a predefined template.
 %
 This means that a single stage of this algorithm will not extract all arrival-times when the pulses are too dense.
 %
@@ -280,15 +314,9 @@ Each of our extraction-algorithms returns a list of reconstructed arrival-times 
 %
 We compare this reconstructed list with the list of true arrival-times.
 %
-Using coincidence intervals we search for true-positive, false-negative, and false-positive matches \footnote{We struggle to define true-negative matches.}.
+Using coincidence-intervals we search for true-positive, false-negative, and false-positive matches \footnote{We struggle to define true-negative matches.}.
 %
-On long signals with many night-sky-photons, we count the occurrence of such matching cases and estimate the true-positive-rate and the false-negative-rate in dependency of the coincidence interval.
-%
-\section*{Result}
-%
-Figure \ref{FigSimPerformanceVsNsb} shows the true-positive-rate, and the false-negative-rate of our slow ADC-read-out for various rates $R_\text{nsb}$ of night-sky-photons and coincidence intervals.
-%
-We vary $R_\text{nsb}$ from $2\times10^6$s$^{-1}$ up to $32\times10^6$s$^{-1}$.
+On long signals with many night-sky-photons, we count the occurrence of such matching cases and estimate the true-positive-rate and the false-negative-rate in dependency of the coincidence-interval.
 %
 \begin{figure}[H]%
 \centering%
@@ -298,41 +326,6 @@ The template of the rising edge sampled with frequency $\fproc{}$ and an amplitu
 }%
 \label{FigSimRisingEdgeTemplate}
 \end{figure}
-%
-\begin{table}[H]
-    \begin{center}
-        \begin{tabular}{lr}
-            Analog path & \\
-            \hline
-            low-pass' cut-off & $\fadc{}/2 = 41.7$\,MHz\\
-            &\\
-            Pulse & \\
-            \hline
-            decay-time mean & $50$\,ns\\
-            decay-time std. dev. & $1$\,ns\\
-            amplitude mean & 1.00\\
-            amplitude std. dev. & 0.01\\
-            amplitude low-pass $\Apulse{}$ & 0.81\\
-            &\\
-            ADC & \\
-            \hline
-            sampling-frequency $\fadc{}$ &$83.3$\,MHz\\
-            noise-amplitude & $0.1\Apulse{} = 0.08$\\
-            amplitude min. & $-0.8\Apulse{} = -0.65$\\
-            amplitude max. & $+12.0\Apulse{} = +9.83$\\
-            resolution & 8\,bit\\
-            &\\
-            Processing & \\
-            \hline
-            sampling-frequency $\fproc{}$& $6\fadc{} = 500.0$\,MHz\\
-            resolution & 10\,bit\\
-        \end{tabular}
-        \caption{%
-The configuration of the simulated read-out. The spread of decay-times and amplitudes for the pulse are taken from the author's experience with the SiPMs and gain-feedback of FACT, and are negligible. See also \cite{fact-performance}.
-}
-        \label{TabReadOutConfig}
-    \end{center}
-\end{table}
 %
 \begin{figure}[H]%
 \centering%
@@ -373,18 +366,45 @@ Vertical dotted line is $\fadc{}/2$, i.e. the ADC's Nyquist-frequency.
 \label{FigSimAnalogTransmission}
 \end{figure}
 %
+\section*{Result}
+%
+Figure \ref{FigSimPerformanceVsNsb} shows the true-positive-rate, and the false-negative-rate of our slow ADC-read-out for various rates $R_\text{nsb}$ of night-sky-photons and various coincidence-intervals.
+%
+We vary $R_\text{nsb}$ from $2\times10^6$s$^{-1}$ to $32\times10^6$s$^{-1}$.
+%
+Both the simple convolution-maximum-algorithm and the more complex multi-subtraction-algorithm perform equally good for low rates of $R_\text{nsb} \approx 2\times{}10^{6}$s$^{-1}$.
+%
+Only when the rate rises, the convolution-maximum-algorithm looses performance while the multi-subtraction-algorithm drops only little in performance up to $R_\text{nsb} \approx 16\times{}10^{6}$s$^{-1}$.
+%
 \begin{figure}[H]%
 \centering%
 \includegraphics[width=1.0\linewidth]{performance.jpg}%
 \caption{%
-Solid line is iterative-subtraction-method, dashed line is convolution-maximum-method.
+Solid line is multi-subtraction-algorithm, dashed line is convolution-maximum-algorithm.
 %
 Dark is true-positive-rate (TPR), gray is false-negative-rate (FNR).
 %
 Time-delta is the radius for matching pairs of true and reconstructed arrival-times.
+%
+Light gray in the background are the uncertainty bands.
 }%
 \label{FigSimPerformanceVsNsb}
 \end{figure}
+%
+\section*{Conclusion}
+%
+Assuming we demand observations up to fluxes of night-sky-photons of $\F{}/\Ftyp{} = 4$, then we can operate our slow ADC-read-out with the multi-subtraction-algorithm and silicon photo-sensors that have an acceptance (behind mirrors) as high as
+\begin{eqnarray}
+Q_\text{SiPM-mirror} = 0.021\,\text{m}^{2}\,(1^\circ{})^2.
+\end{eqnarray}
+%
+This yields $R_\text{nsb} = 4\times{}10^6$s$^{-1}$ for $\F{}/\Ftyp{} = 1$, and $R_\text{nsb} = 16\times{}10^6$s$^{-1}$ for $\F{}/\Ftyp{} = 4$.
+%
+With a typical pixel's field-of-view of $\approx{} 0.01\,(1^\circ{})^2$, this leaves us $2\,$m$^{2}$ for the aperture-area.
+%
+Today, the photo-sensors of Cherenkov-telescopes have rates starting at 8\,times larger going up to 80\,times larger, see Table \ref{TabInstrumentsNsbRates}.
+%
+However, when one can obtain the benefits of plenoptic perception with aberration-compensation for free, then an increase in read-out-channels by a factor of 8 does not sound so unreasonable.
 %
 \bibliographystyle{apalike}%
 \bibliography{references}%
