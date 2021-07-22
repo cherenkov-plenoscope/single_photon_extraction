@@ -35,6 +35,10 @@
 
 \newcommand{\F}{F_\text{nsb}}
 \newcommand{\Ftyp}{F_\text{typical}}
+\newcommand{\Apulse}{A_\text{pulse}}
+\newcommand{\fadc}{f_\text{adc}}
+\newcommand{\fproc}{f_\text{proc}}
+
 \begin{multicols}{2}%
 %
 The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle from the Cherenkov-light emitted in air-showers.
@@ -51,22 +55,22 @@ We expect such a read-out to lower the energy-threshold \cite{jung2005star}, to 
 %
 One way of continues read-out are flash analog-digital-converters (ADC)s.
 %
-However, their cost and power-consumption scale rapidly with their sampling frequency $f$.
+However, their cost and power-consumption scale rapidly with their sampling frequency $\fadc{}$.
 %
 \begin{eqnarray*}
-\text{Cost} &\sim& f^2,\\
-\text{Power} &\sim& f^2.
+\text{Cost} &\sim& \fadc{}^2,\\
+\text{Power} &\sim& \fadc{}^2.
 \end{eqnarray*}
 %
 In this report, we explore a possible read-out with many slow \mbox{($f$ < 100\,MHz)} ADCs.
 %
 We want each slow ADC to digitizes the signal of a photo-sensor that have only little acceptances (area and solid angle) and thus a low rate of night-sky-photons.
 %
-We hope that when the photo-sensor's rate of night-sky-photons is low, a slow ADC in combination with a little computing will be able to reconstruct the arrival-times of the individual photons sufficiently accurate, i.e. better than the sampling period $1/f$.
+We hope that when the photo-sensor's rate of night-sky-photons is low, a slow ADC in combination with a little computing will be able to reconstruct the arrival-times of the individual photons sufficiently accurate, i.e. better than the sampling period $1/\fadc{}$.
 %
 Since the cost of silicon photo-sensors are mostly proportional to their area, there is only little cost overhead when replacing a big sensor with multiple small ones.
 %
-Due to the rapid scaling of the ADC's demands with sampling frequency $f$, many slow ADCs might outperform fewer fast ADCs in both power-consumption and cost.
+Due to the rapid scaling of the ADC's demands with sampling frequency $\fadc{}$, many slow ADCs might outperform fewer fast ADCs in both power-consumption and cost.
 \newline
 Further, the finer binning of photo-sensors might allow the implementation of small aperture (< 100\,m$^2$) plenoscopes covering large ($> 300\,(1^\circ{})^2$) field-of-views due to computational compensation of optical aberrations. \cite{mueller2019phd}.
 %
@@ -165,6 +169,8 @@ Both Extrapolated from 700\,nm to 1000\,nm.
 \includegraphics[width=1.0\linewidth]{observation_time_histogram.png}%
 \caption{
 Figure taken from \cite{mueller2019phd}.
+%
+The distribution of FACT's observation-time vs. the flux of night-sky-light.
 }%
 \label{fig:obstimeFact}
 \end{figure}
@@ -172,7 +178,7 @@ Figure taken from \cite{mueller2019phd}.
 \begin{table}[H]
   \begin{center}
     \begin{tabular}{lcrrr}
-        &tech.& area/ & fov/&$R$/\\
+        &tech.& area/ & fov/&$R_\text{nsb}$/\\
         &     & m$^2$ & $(1^\circ)^{2}$&$10^6$s$^{-1}$\\
       \hline
       FACT &SiPM& 10 & 0.01 & 29\\
@@ -185,8 +191,200 @@ Figure taken from \cite{mueller2019phd}.
   \end{center}
 \end{table}
 %
-\section*{Simulating}%
+\section*{Simulating a slow ADC-read-out}%
 \label{SecSimulating}%
+%
+To estimate the reconstruction power of a read-out with slow sampling ADC's, we run a simulation.
+%
+We simulate the electric response of a silicon photo-sensor (G-APD-array).
+%
+Our readout is designed around an ADC with a sampling-rate $\fadc{}=83.3$\,MHz and a resolution of 8\,bit.
+%
+Table \ref{TabReadOutConfig} shows the configuration of our read-out.
+%
+\subsection*{Analog path}%
+%
+The analog path of our read-out is designed to match $\fadc{}$ with a gain that drops down to 1/2 (-3dB) at the ADC's Nyquist-frequency $f = \fadc{}/2$, see Figure \ref{FigSimAnalogTransmission}.
+%
+Also the electric coupling to the photo-sensor is chosen have a decay-time of the pulse that covers multiple ADC samples.
+%
+To avoid additional noise and artifacts, we do not use pulse-shaping such as $\lambda /2$ reflections.
+%
+Figure \ref{FigSimPulseTemplate} shows our electric pulse in the analog path and Figure \ref{FigSimPulsePhases} shows the pulse for various relative phases w.r.t. the ADC's sampling.
+%
+\subsection*{ADC}%
+%
+Our ADC has a white noise-amplitude of $0.1\Apulse{}$ \footnote{The same noise-amplitude as FACT.}, where $\Apulse{}$ is the maximum amplitude of the pulse at the ADC's input, i.e. after the low-pass.
+%
+Our ADC's amplitude-range spans from $-0.8\Apulse{}$ to $12.0\Apulse{}$. This means it will saturate for a coincident stack larger than 12 photons and gives us about 20 amplitude-steps for $\Apulse{}$.
+%
+\subsection*{Processing path}%
+%
+Our digital processing over samples the ADC's signal with a sampling-frequency of $\fproc{} = 6\fadc{} = 500.0$\,MHz, and with a four times higher amplitude-resolution of 10\,bit.
+%
+The digital processing does not interpolate or smooth the ADC's signal, but for example in internal convolutions with a kernel-function the processing makes use of its higher resolution.
+%
+We design all algorithms for the digital processing without conditional branching, i.e. easy to implement with basic logic gates.
+%
+We have Field-Programmable Gate Arrays (FPGA)s in mind, but happily use CPUs when fast enough.
+%
+\subsection*{Extracting photon-arrivals}%
+%
+We test two algorithms to extract the arrival-times of photons from the digital signal.
+%
+These algorithms run in the digital processing path of our read-out and thus operate with sampling-frequency $\fproc{}$ and 10\,bit amplitude-resolution.
+%
+They are FPGA-aware.
+%
+\subsubsection*{Convolution-Maximum}%
+%
+Our first algorithm convolves the signal with a template of the pulse's rising edge, see Figure \ref{FigSimRisingEdgeTemplate}.
+%
+When the response of the convolution is above a threshold of $0.4\Apulse{}$, AND when the gradient of the response is rising, AND when all these conditions where not in the previous time-sample, than the current time-sample is identified to be the arrival of a pulse.
+%
+\subsubsection*{Multi-Subtraction}%
+%
+The second algorithm also convolves the signal with the template of the pulse's rising edge. It also uses the response of the convolution to estimate the arrival-time of a pulse.
+%
+But it does not take the current pulse into account when the decay of an earlier pulse effects the current pulse.
+%
+When a leading pulse is found, its arrival-time is exported, and the pulse is subtracted from the signal using a predefined template.
+%
+This means that a single stage of this algorithm will not extract all arrival-times when the pulses are too dense.
+%
+To improve this, multiple stages of the same algorithm are used in series.
+%
+The input signal for the next stage is the output signal of the current stage.
+%
+Each stage subtracts the leading pulses.
+%
+Here, we use 12 stages.
+%
+\subsection*{Simulating night-sky-light}%
+%
+We create analog signals where we add pulses according to a specific rate of night-sky-photons $R_\text{nsb}$.
+%
+The distribution of delays $\Delta t$ between the arrival-times of night-sky-photon is
+%
+\begin{eqnarray}
+\Delta t &=& - \mathrm{log}\left( \frac{\text{prng.uniform(0, 1)}}{R_\text{nsb}}\right)
+\end{eqnarray}
+%
+where prng.uniform(0, 1) is a uniform pseudo random number generator.
+%
+Thus we know the true arrival-time of each photon.
+%
+\subsection*{Benchmarking}%
+%
+Each of our extraction-algorithms returns a list of reconstructed arrival-times of photons.
+%
+We compare this reconstructed list with the list of true arrival-times.
+%
+Using coincidence intervals we search for true-positive, false-negative, and false-positive matches \footnote{We struggle to define true-negative matches.}.
+%
+On long signals with many night-sky-photons, we count the occurrence of such matching cases and estimate the true-positive-rate and the false-negative-rate in dependency of the coincidence interval.
+%
+\section*{Result}
+%
+Figure \ref{FigSimPerformanceVsNsb} shows the true-positive-rate, and the false-negative-rate of our slow ADC-read-out for various rates $R_\text{nsb}$ of night-sky-photons and coincidence intervals.
+%
+We vary $R_\text{nsb}$ from $2\times10^6$s$^{-1}$ up to $32\times10^6$s$^{-1}$.
+%
+\begin{figure}[H]%
+\centering%
+\includegraphics[width=1.0\linewidth]{FPGA_pulse_rising_edge_template.jpg}%
+\caption{
+The template of the rising edge sampled with frequency $\fproc{}$ and an amplitude-resolution of 10\,bit. The signal is convolved with this template to identify rising edges and to suppress amplitude-noise.
+}%
+\label{FigSimRisingEdgeTemplate}
+\end{figure}
+%
+\begin{table}[H]
+    \begin{center}
+        \begin{tabular}{lr}
+            Analog path & \\
+            \hline
+            low-pass' cut-off & $\fadc{}/2 = 41.7$\,MHz\\
+            &\\
+            Pulse & \\
+            \hline
+            decay-time mean & $50$\,ns\\
+            decay-time std. dev. & $1$\,ns\\
+            amplitude mean & 1.00\\
+            amplitude std. dev. & 0.01\\
+            amplitude low-pass $\Apulse{}$ & 0.81\\
+            &\\
+            ADC & \\
+            \hline
+            sampling-frequency $\fadc{}$ &$83.3$\,MHz\\
+            noise-amplitude & $0.1\Apulse{} = 0.08$\\
+            amplitude min. & $-0.8\Apulse{} = -0.65$\\
+            amplitude max. & $+12.0\Apulse{} = +9.83$\\
+            resolution & 8\,bit\\
+            &\\
+            Processing & \\
+            \hline
+            sampling-frequency $\fproc{}$& $6\fadc{} = 500.0$\,MHz\\
+            resolution & 10\,bit\\
+        \end{tabular}
+        \caption{%
+The configuration of the simulated read-out. The spread of decay-times and amplitudes for the pulse are taken from the author's experience with the SiPMs and gain-feedback of FACT, and are negligible. See also \cite{fact-performance}.
+}
+        \label{TabReadOutConfig}
+    \end{center}
+\end{table}
+%
+\begin{figure}[H]%
+\centering%
+\includegraphics[width=1.0\linewidth]{pulse_template_perfect.jpg}%
+\caption{
+The electric pulse of the photo-sensor.
+%
+Dotted line is the pulse before the low-pass.
+%
+Solid line is the pulse after the amplifier's low-pass, see Figure \ref{FigSimAnalogTransmission}, and right before the ADC's input.
+%
+Hatched area marks the decay-time of the pulse down to $\mathrm{e}^{-1}$.
+}%
+\label{FigSimPulseTemplate}
+\end{figure}
+%
+\begin{figure}[H]%
+\centering%
+\includegraphics[width=1.0\linewidth]{pulse_template_adc_various_phases.jpg}%
+\caption{
+The photo-sensor's pulse seen by the ADC with various phases.
+}%
+\label{FigSimPulsePhases}
+\end{figure}
+%
+\begin{figure}[H]%
+\centering%
+\includegraphics[width=1.0\linewidth]{analog_transmission.jpg}%
+\caption{
+The gain of the analog amplifier.
+%
+Horizontal dashed line is gain$=0.5$, i.e. the $-3$dB point.
+%
+Vertical dashed line is the ADC's samplig-frequency $\fadc{}$.
+%
+Vertical dotted line is $\fadc{}/2$, i.e. the ADC's Nyquist-frequency.
+}%
+\label{FigSimAnalogTransmission}
+\end{figure}
+%
+\begin{figure}[H]%
+\centering%
+\includegraphics[width=1.0\linewidth]{performance.jpg}%
+\caption{%
+Solid line is iterative-subtraction-method, dashed line is convolution-maximum-method.
+%
+Dark is true-positive-rate (TPR), gray is false-negative-rate (FNR).
+%
+Time-delta is the radius for matching pairs of true and reconstructed arrival-times.
+}%
+\label{FigSimPerformanceVsNsb}
+\end{figure}
 %
 \bibliographystyle{apalike}%
 \bibliography{references}%
