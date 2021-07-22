@@ -290,26 +290,26 @@ ramp_slices = 100
 ramp = np.linspace(0, 1, ramp_slices)
 FPGA_sig_vs_t[0:ramp_slices] = FPGA_sig_vs_t[0:ramp_slices] * ramp
 
-FPGA_pulse_edge = spe.signal.to_analog_level(
+FPGA_pulse_rising_edge_template = spe.signal.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
     num_bits=FPGA_CONFIG["num_bits"],
 )
-FPGA_pulse_edge = FPGA_pulse_edge[0: 2 * pt_offset_num_fpga_samples]
+FPGA_pulse_rising_edge_template = FPGA_pulse_rising_edge_template[0: 2 * pt_offset_num_fpga_samples]
 if PLOT:
     fig = splt.figure(PLOT_FIGSTYLE)
     ax = splt.add_axes(fig, PLOT_AXSPAN)
     ax.step(
         spe.signal.make_timeseries(
-            len(FPGA_pulse_edge),
+            len(FPGA_pulse_rising_edge_template),
             periode=FPGA_PERIODE,
         ),
-        FPGA_pulse_edge,
+        FPGA_pulse_rising_edge_template,
         "k",
     )
     ax.set_xlabel("time / s")
-    fig.savefig("FPGA_pulse_edge.jpg")
+    fig.savefig("FPGA_pulse_rising_edge_template.jpg")
     splt.close_figure(fig)
 
 
@@ -336,9 +336,9 @@ if PLOT:
 
 ex_config = {
     "min_amplitude_to_subtract_from": -0.1 * ANALOG_PULSE_AMPLITUDE,
-    "pulse_rising_edge_template": FPGA_pulse_edge,
+    "pulse_rising_edge_template": FPGA_pulse_rising_edge_template,
     "subtraction_pulse_template": FPGA_sub_pulse_template,
-    "num_subtraction_offset_slices": int(len(FPGA_pulse_edge)*0.85),
+    "num_subtraction_offset_slices": int(len(FPGA_pulse_rising_edge_template)*0.85),
     "stage_thresholds": 0.5 * ANALOG_PULSE_AMPLITUDE * np.ones(10),
     "num_cooldown_slices": len(FPGA_sub_pulse_template)
 }
