@@ -1,18 +1,16 @@
 import single_photon_extraction as spe
 import single_photon_extraction.plot
 import numpy as np
+import pandas as pd
 import sebastians_matplotlib_addons as splt
 
 
 PLOT = True
 PLOT_FIGSTYLE = {"rows": 720, "cols": 1920, "fontsize": 1}
 PLOT_AXSPAN = [0.1, 0.15, 0.85, 0.8]
-
+PLOT_DEBUG = False
 
 prng = np.random.Generator(np.random.MT19937(seed=0))
-NUM_SAMPLES = 2 * 1000
-
-NSB_RATE = 10e6
 
 ANALOG_CONFIG = {
     "periode": 0.5e-9,
@@ -228,43 +226,14 @@ if PLOT:
     splt.close_figure(fig)
 
 
-# populate time series with nsb make_pulses
-# ====================================
-
-event = spe.make_night_sky_background_event(
-    num_samples=NUM_SAMPLES,
-    analog_config=ANALOG_CONFIG,
-    pulse_config=PULSE_CONFIG,
-    adc_config=ADC_CONFIG,
-    fpga_config=FPGA_CONFIG,
-    nsb_rate=NSB_RATE,
-    prng=prng,
-)
-
-if PLOT:
-    fig = splt.figure(PLOT_FIGSTYLE)
-    ax = splt.add_axes(fig, PLOT_AXSPAN)
-    spe.plot.ax_add_event(ax=ax, event=event)
-    ax.set_xlabel("time / s")
-    ax.set_ylabel("amplitude / 1")
-    fig.savefig("event.jpg")
-    splt.close_figure(fig)
-
+# prepare extraction
+# ==================
 
 pt_offset_num_fpga_samples = pt_offset_num_analog_samples / (
     ADC_CONFIG["skips"] / FPGA_CONFIG["adc_repeats"]
 )
 pt_offset_num_fpga_samples = int(pt_offset_num_fpga_samples)
 
-FPGA_sig_vs_t = spe.signal.to_analog_level(
-    digital=event["fpga"],
-    amplitude_min=ADC_CONFIG["amplitude_min"],
-    amplitude_max=ADC_CONFIG["amplitude_max"],
-    num_bits=FPGA_CONFIG["num_bits"],
-)
-ramp_slices = 100
-ramp = np.linspace(0, 1, ramp_slices)
-FPGA_sig_vs_t[0:ramp_slices] = FPGA_sig_vs_t[0:ramp_slices] * ramp
 
 FPGA_pulse_rising_edge_template = spe.signal.to_analog_level(
     digital=ptemp["fpga"],
@@ -310,7 +279,10 @@ if PLOT:
     fig.savefig("FPGA_spe_sub_pulse_template.jpg")
     splt.close_figure(fig)
 
-ex_config = {
+# extractor configs
+# =================
+
+sub_config = {
     "min_amplitude_to_subtract_from": -0.1 * ANALOG_PULSE_AMPLITUDE,
     "pulse_rising_edge_template": FPGA_pulse_rising_edge_template,
     "subtraction_pulse_template": FPGA_sub_pulse_template,
@@ -321,49 +293,196 @@ ex_config = {
     "num_cooldown_slices": len(FPGA_sub_pulse_template),
 }
 
-ex_reco_arrival_times, ex_debug = spe.extractors.iterative_subtraction.apply(
-    sampling_periode=FPGA_PERIODE, sig=FPGA_sig_vs_t, config=ex_config
-)
+com_config = {
+    "min_amplitude": -0.1 * ANALOG_PULSE_AMPLITUDE,
+    "pulse_rising_edge_template": FPGA_pulse_rising_edge_template,
+    "convolution_gradient_threshold": 0.05 * ANALOG_PULSE_AMPLITUDE,
+    "convolution_threshold": 0.5 * ANALOG_PULSE_AMPLITUDE,
+    "num_offset_slices": -int(
+        len(FPGA_pulse_rising_edge_template) * 0.45
+    ),
+}
 
-if PLOT:
-    for stage in range(len(ex_config["stage_thresholds"])):
-        dbg = ex_debug["stage_debugs"][stage]
+# run extraction
+# ==============
 
+extraction_methods = {
+    "sub": {"linestyle": "-"},
+    "com": {"linestyle": "--"},
+}
+
+NSB_RATES = np.array([2, 4, 8, 16, 32])*1e6
+
+performance_vs_nsb = []
+for ii_nsb in range(len(NSB_RATES)):
+    NSB_RATE = NSB_RATES[ii_nsb]
+
+    NUM_SAMPLES = 100 * 1000
+    # make event
+    # ----------
+    event = spe.make_night_sky_background_event(
+        num_samples=NUM_SAMPLES,
+        analog_config=ANALOG_CONFIG,
+        pulse_config=PULSE_CONFIG,
+        adc_config=ADC_CONFIG,
+        fpga_config=FPGA_CONFIG,
+        nsb_rate=NSB_RATE,
+        prng=prng,
+    )
+
+    if PLOT_DEBUG:
         fig = splt.figure(PLOT_FIGSTYLE)
         ax = splt.add_axes(fig, PLOT_AXSPAN)
-        ax.step(dbg["sig"], "k", alpha=0.4)
-        ax.plot(dbg["sig_conv_pulse"], "k", alpha=0.1)
-        ax.step(dbg["extraction_candidates"], "b", alpha=0.1)
-        ax.step(dbg["extraction"], "r", alpha=0.1)
-        ax.step(
-            dbg["cooldown"] / ex_config["num_cooldown_slices"], "g", alpha=1
-        )
+        spe.plot.ax_add_event(ax=ax, event=event)
+        ax.set_xlabel("time / s")
+        ax.set_ylabel("amplitude / 1")
+        fig.savefig("event.jpg")
+        splt.close_figure(fig)
+
+    FPGA_sig_vs_t = spe.signal.to_analog_level(
+        digital=event["fpga"],
+        amplitude_min=ADC_CONFIG["amplitude_min"],
+        amplitude_max=ADC_CONFIG["amplitude_max"],
+        num_bits=FPGA_CONFIG["num_bits"],
+    )
+    ramp_slices = 100
+    ramp = np.linspace(0, 1, ramp_slices)
+    FPGA_sig_vs_t[0:ramp_slices] = FPGA_sig_vs_t[0:ramp_slices] * ramp
+
+    # apply sub
+    # ---------
+    sub_reco_arrival_times, sub_debug = spe.extractors.iterative_subtraction.apply(
+        sampling_periode=FPGA_PERIODE, sig=FPGA_sig_vs_t, config=sub_config
+    )
+
+    if PLOT_DEBUG:
+        for stage in range(len(sub_config["stage_thresholds"])):
+            dbg = sub_debug["stage_debugs"][stage]
+
+            fig = splt.figure(PLOT_FIGSTYLE)
+            ax = splt.add_axes(fig, PLOT_AXSPAN)
+            ax.step(dbg["sig"], "k", alpha=0.4)
+            ax.plot(dbg["sig_conv_pulse"], "k", alpha=0.1)
+            ax.step(dbg["extraction_candidates"], "b", alpha=0.1)
+            ax.step(dbg["extraction"], "r", alpha=0.1)
+            ax.step(
+                dbg["cooldown"] / sub_config["num_cooldown_slices"], "g", alpha=1
+            )
+            ax.set_ylim([-0.2, 1.2])
+            ax.set_xlabel("time / fpga-samples")
+            ax.set_ylabel("amplitude")
+            fig.savefig("sub_extraction_{:06d}.jpg".format(stage))
+            splt.close_figure(fig)
+
+    if PLOT_DEBUG:
+        _sub_event = dict(event)
+        _sub_event["reco_arrival_times"] = sub_reco_arrival_times
+        fig = splt.figure(PLOT_FIGSTYLE)
+        ax = splt.add_axes(fig, PLOT_AXSPAN)
+        spe.plot.ax_add_event(ax=ax, event=_sub_event)
+        ax.set_xlabel("time / s")
+        ax.set_ylabel("amplitude / 1")
+        fig.savefig("sub_event.jpg")
+        splt.close_figure(fig)
+
+    # apply com
+    # ---------
+    com_reco_arrival_times, com_debug = spe.extractors.convolution_maximum.apply(
+        sampling_periode=FPGA_PERIODE, sig=FPGA_sig_vs_t, config=com_config
+    )
+
+    if PLOT_DEBUG:
+        fig = splt.figure(PLOT_FIGSTYLE)
+        ax = splt.add_axes(fig, PLOT_AXSPAN)
+        ax.step(com_debug["sig"], "k", alpha=0.4)
+        ax.plot(com_debug["sig_conv"], "k", alpha=0.1)
+        ax.plot(com_debug["response"], "k", alpha=1)
+        ax.plot(com_debug["response_rising"], "r", alpha=1)
         ax.set_ylim([-0.2, 1.2])
         ax.set_xlabel("time / fpga-samples")
         ax.set_ylabel("amplitude")
-        fig.savefig("spe_{:06d}.jpg".format(stage))
+        fig.savefig("com_extraction.jpg")
         splt.close_figure(fig)
 
-event["reco_arrival_times"] = ex_reco_arrival_times
+    if PLOT_DEBUG:
+        _com_event = dict(event)
+        _com_event["reco_arrival_times"] = com_reco_arrival_times
+        fig = splt.figure(PLOT_FIGSTYLE)
+        ax = splt.add_axes(fig, PLOT_AXSPAN)
+        spe.plot.ax_add_event(ax=ax, event=_com_event)
+        ax.set_xlabel("time / s")
+        ax.set_ylabel("amplitude / 1")
+        fig.savefig("com_event.jpg")
+        splt.close_figure(fig)
 
-performance = []
-for time_delta in FPGA_PERIODE * np.arange(25):
-    p = spe.benchmark(
-        reco_times=event["reco_arrival_times"],
-        true_times=event["true_arrival_times"],
-        time_delta=time_delta,
-    )
-    p["time_delta"] = time_delta
-    ana = spe.analyse_benchmark(tp=p["tp"], tn=["tn"], fp=p["fp"], fn=p["fn"])
-    for key in ana:
-        p[key] = ana[key]
-    performance.append(p)
+    # analysis
+    # --------
 
-if PLOT:
-    fig = splt.figure(PLOT_FIGSTYLE)
-    ax = splt.add_axes(fig, PLOT_AXSPAN)
-    spe.plot.ax_add_event(ax=ax, event=event)
-    ax.set_xlabel("time / s")
-    ax.set_ylabel("amplitude / 1")
-    fig.savefig("final.jpg")
-    splt.close_figure(fig)
+    reco_arrival_times = {
+        "sub": sub_reco_arrival_times,
+        "com": com_reco_arrival_times,
+    }
+
+    performance = {}
+    time_deltas = FPGA_PERIODE * np.arange(10)
+    for mk in extraction_methods:
+        performance[mk] = []
+        for time_delta in time_deltas:
+            p = spe.benchmark(
+                reco_times=reco_arrival_times[mk],
+                true_times=event["true_arrival_times"],
+                time_delta=time_delta,
+            )
+            p["time_delta"] = time_delta
+            ana = spe.analyse_benchmark(tp=p["tp"], tn=["tn"], fp=p["fp"], fn=p["fn"])
+            for key in ana:
+                p[key] = ana[key]
+            performance[mk].append(p)
+
+    for mk in extraction_methods:
+        performance[mk] = pd.DataFrame(performance[mk]).to_records(index=False)
+
+    performance_vs_nsb.append(performance)
+
+
+fig = splt.figure({"rows": 1920, "cols": 1920, "fontsize": 1.2})
+
+num_nsb_rates = len(NSB_RATES)
+
+pvnsb = performance_vs_nsb
+for n in range(num_nsb_rates):
+    ax = splt.add_axes(fig, [0.1, 0.1 + n*(1/(num_nsb_rates+1)), 0.6, 0.9/(num_nsb_rates+1)])
+    for mk in extraction_methods:
+        ax.plot(
+            1e9 * time_deltas,
+            pvnsb[n][mk]["true_positive_rate_mean"],
+            color="k",
+            linestyle=extraction_methods[mk]["linestyle"],
+        )
+        ax.plot(
+            1e9 * time_deltas,
+            pvnsb[n][mk]["false_negative_rate_mean"],
+            color="k",
+            linestyle=extraction_methods[mk]["linestyle"],
+            alpha=0.33
+        )
+        ax.set_ylim([-0.05, +1.05])
+        if n != 0:
+            ax.tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='both',      # both major and minor ticks are affected
+                bottom=False,      # ticks along the bottom edge are off
+                top=False,         # ticks along the top edge are off
+                labelbottom=False) # labels along the bottom edge are off
+        ax.text(
+            s=r"$R_\mathrm{nsb}$ = "+"{:0.1e}".format(NSB_RATES[n])+"s$^{-1}$",
+            x=1.1 * max(1e9 * time_deltas),
+            y=0.5,
+        )
+
+
+    if n == 0:
+        ax.set_ylabel("TPR and FNR / 1")
+        ax.set_xlabel("time-delta / ns")
+fig.savefig("performance.jpg")
+splt.close_figure(fig)
