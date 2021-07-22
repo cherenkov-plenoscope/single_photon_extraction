@@ -37,18 +37,16 @@ def ax_add_event(ax, event):
             ),
         )
 
-        splt.ax_add_histogram(
-            ax=ax,
-            bin_edges=adc_timeseries,
-            bincounts=spe.signal.to_analog_level(
-                digital=event["adc"][:-1],
+        ax.step(
+            adc_timeseries,
+            spe.signal.to_analog_level(
+                digital=event["adc"],
                 amplitude_min=event["config"]["adc"]["amplitude_min"],
                 amplitude_max=event["config"]["adc"]["amplitude_max"],
                 num_bits=event["config"]["adc"]["num_bits"],
             ),
-            linecolor="orange",
-            linealpha=0.5,
-            draw_bin_walls=True,
+            color="orange",
+            alpha=0.5,
         )
 
     # fpga
