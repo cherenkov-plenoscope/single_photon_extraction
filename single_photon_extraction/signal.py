@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def make_timeseries(num_samples, periode, time_start=0.0):
     return np.linspace(
         time_start,
@@ -81,6 +80,14 @@ def add_first_to_second_at(f1, f2, injection_slices):
     return out
 
 
+def make_analog_output(periode, perfect, lowpass_cutoff_frequency):
+    bandwitdh_kernel = make_bell(
+        periode=periode, bell_std=(0.2 / lowpass_cutoff_frequency)
+    )
+    analog = np.convolve(perfect, bandwitdh_kernel, mode="same")
+    return analog
+
+
 def make_adc_output(
     analog, skips, amplitude_noise, amplitude_min, amplitude_max, num_bits, prng,
 ):
@@ -128,3 +135,13 @@ def to_analog_level(
     ana *= amplitude_max - amplitude_min
     ana += amplitude_min
     return ana
+
+
+def power_spectrum(periode, sig_vs_t):
+    spec = np.fft.fft(sig_vs_t)
+    freq = np.fft.fftfreq(spec.size, d=periode)
+    idx = np.argsort(freq)
+    freq = freq[idx]
+    spec = spec[idx]
+    spec = np.sqrt(np.real(spec)**2.0 + np.imag(spec)**2.0)
+    return freq, spec

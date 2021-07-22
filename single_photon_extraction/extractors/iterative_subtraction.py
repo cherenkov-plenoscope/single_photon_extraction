@@ -23,7 +23,7 @@ def timeseries_apply_cooldown(timeseries, cooldown_slices):
     return out
 
 
-def fpga_single_extraction_stage(
+def one_stage(
     sig_vs_t,
     min_baseline_amplitude,
     pulse_template,

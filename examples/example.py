@@ -5,6 +5,9 @@ import sebastians_matplotlib_addons as splt
 
 
 PLOT = True
+PLOT_FIGSTYLE = {"rows": 720, "cols": 1920, "fontsize": 1}
+PLOT_AXSPAN = [0.1, 0.15, 0.85, 0.8]
+
 
 prng = np.random.Generator(np.random.MT19937(seed=0))
 NUM_SAMPLES = 4 * 1000
@@ -50,18 +53,18 @@ pt_pulse = spe.signal.make_pulse(
     pulse_amplitude=PULSE_CONFIG["amplitude"],
     pulse_decay_time=PULSE_CONFIG["decay_time"],
 )
-pt_bandwitdh_kernel = spe.signal.make_bell(
-    periode=ANALOG_CONFIG["periode"], bell_std=(1 / ANALOG_CONFIG["bandwidth"])
-)
-pt_analog = spe.signal.make_timeseries(
+pt_perfect = spe.signal.make_timeseries(
     num_samples=len(pt_pulse) + 200,
     periode=ANALOG_CONFIG["periode"]
 )
-pt_analog = spe.signal.add_first_to_second_at(
-    f1=pt_pulse, f2=pt_analog, injection_slices=[200],
+pt_perfect = spe.signal.add_first_to_second_at(
+    f1=pt_pulse, f2=pt_perfect, injection_slices=[200],
 )
-pt_analog = np.convolve(pt_analog, pt_bandwitdh_kernel, mode="same")
-
+pt_analog = spe.signal.make_analog_output(
+    periode=ANALOG_CONFIG["periode"],
+    perfect=pt_perfect,
+    lowpass_cutoff_frequency=ANALOG_CONFIG["bandwidth"],
+)
 pt_adc = spe.signal.make_adc_output(
     analog=pt_analog,
     skips=ADC_CONFIG["skips"],
@@ -97,6 +100,54 @@ ptemp = {
 if PLOT:
     spe.plot.plot_event(event=ptemp, path="pulse_template.jpg")
 
+# plot analog bandwidth
+# ---------------------
+if PLOT:
+    sp_N = 1000*1000
+
+    # a delta-function
+    sp_ts = spe.signal.make_timeseries(
+        num_samples=sp_N,
+        periode=ANALOG_CONFIG["periode"]
+    )
+    sp_perfect = np.zeros(sp_N)
+    sp_perfect[sp_N//2] = 1
+
+    sp_analog = spe.signal.make_analog_output(
+        periode=ANALOG_CONFIG["periode"],
+        perfect=sp_perfect,
+        lowpass_cutoff_frequency=ANALOG_CONFIG["bandwidth"],
+    )
+
+    sp_freq, sp_spec_analog = spe.signal.power_spectrum(
+        periode=ANALOG_CONFIG["periode"],
+        sig_vs_t=sp_analog
+    )
+
+    fig = splt.figure(PLOT_FIGSTYLE)
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
+    ax.step(sp_freq, sp_spec_analog, "k")
+    ax.axvline(
+        1/ANALOG_CONFIG["periode"]/ADC_CONFIG["skips"],
+        color="k",
+        alpha=0.33,
+        linestyle="--"
+    )
+    ax.axhline(
+        0.5,
+        color="k",
+        alpha=0.33,
+        linestyle="--"
+    )
+    ax.set_xlabel("frequency / Hz")
+    ax.set_ylabel("gain / 1")
+    ax.set_xlim([1e6, 1e9])
+    ax.set_ylim([1e-3, 1.1e0])
+    ax.loglog()
+    fig.savefig("pulse_power_spectrum.jpg")
+    splt.close_figure(fig)
+
+
 # populate time series with nsb make_pulses
 # ====================================
 
@@ -113,115 +164,6 @@ event = spe.make_night_sky_background_event(
 
 if PLOT:
     spe.plot.plot_event(event, path="event.jpg")
-
-"""
-# run extraction ADC-speed
-# ========================
-
-offset_slices = 9
-
-sig_vs_t = spe.to_analog_level(
-    digital=event["adc"],
-    amplitude_min=ADC_CONFIG["amplitude_min"],
-    amplitude_max=ADC_CONFIG["amplitude_max"],
-    num_bits=ADC_CONFIG["num_bits"],
-)
-sig_vs_t[0:offset_slices] = 0.0
-
-pulse_template = spe.to_analog_level(
-    digital=ptemp["adc"],
-    amplitude_min=ADC_CONFIG["amplitude_min"],
-    amplitude_max=ADC_CONFIG["amplitude_max"],
-    num_bits=ADC_CONFIG["num_bits"],
-)[3:11]
-spe.plot.plot_extraction_state(
-    dig=pulse_template,
-    ADC_FREQUENCY=ADC_FREQUENCY,
-    truth=event["true_arrival_times"],
-    path="spe_pulse_template.jpg",
-)
-
-sub_pulse_template = -1.0 * spe.to_analog_level(
-    digital=ptemp["adc"],
-    amplitude_min=ADC_CONFIG["amplitude_min"],
-    amplitude_max=ADC_CONFIG["amplitude_max"],
-    num_bits=ADC_CONFIG["num_bits"],
-)
-spe.plot.plot_extraction_state(
-    dig=sub_pulse_template,
-    ADC_FREQUENCY=ADC_FREQUENCY,
-    truth=event["true_arrival_times"],
-    path="spe_sub_pulse_template.jpg",
-)
-
-
-def iterative_pulse_extraction(
-    sig_vs_t, pulse_template, sub_pulse_template,
-):
-    intermediate_sig_vs_t = []
-    sig_vs_t_copy = sig_vs_t.copy()
-    arrivalSlices = []
-    puls_template_integral = sum(pulse_template)
-
-    iii = 0
-    while True:
-        sig_conv_sipm = (
-            np.convolve(sig_vs_t_copy, pulse_template, mode="valid")
-            / puls_template_integral
-        )
-
-        if PLOT:
-            spe.plot.plot_extraction_state(
-                dig=sig_vs_t_copy,
-                ADC_FREQUENCY=ADC_FREQUENCY,
-                truth=event["true_arrival_times"],
-                path="spe_{:06d}.jpg".format(iii),
-                ylim=[-1, 5],
-            )
-
-        max_slice = int(np.round(np.argmax(sig_conv_sipm) - offset_slices))
-        max_response = np.max(sig_conv_sipm)
-
-        if max_response >= 0.32:
-            sig_vs_t_copy = spe.add_first_to_second_at(
-                f1=sub_pulse_template,
-                f2=sig_vs_t_copy,
-                injection_slices=[max_slice],
-            )
-            if max_slice > 0:
-                arrivalSlices.append(max_slice + offset_slices * 0.95)
-        else:
-            break
-
-        iii += 1
-
-    reco_arrival_slices = np.array(arrivalSlices)
-    return reco_arrival_slices
-
-
-reco_arrival_slices = iterative_pulse_extraction(
-    sig_vs_t=sig_vs_t,
-    pulse_template=pulse_template,
-    sub_pulse_template=sub_pulse_template,
-)
-
-rr = spe.benchmark(
-    arrivalsExtracted=reco_arrival_slices * ADC_CONFIG["skips"],
-    arrivalsTruth=event["true_arrival_times"]
-    / event["config"]["analog"]["periode"],
-    windowRadius=100,
-)
-
-event["reco_arrival_times"] = (
-    reco_arrival_slices
-    * ADC_CONFIG["skips"]
-    * event["config"]["analog"]["periode"]
-)
-
-spe.plot.plot_event(event=event, path="final.jpg")
-"""
-
-## FPGA extraction
 
 
 MIN_BASELINE_AMPLITUDE = -0.1 * PULSE_CONFIG["amplitude"]
@@ -290,7 +232,7 @@ recos = []
 remain_sig_vs_t = FPGA_sig_vs_t.copy()
 
 for stage in range(len(GRAD_THRESHOLDS)):
-    next_sig_vs_t, reco_arrival_slices, debug = spe.extractors.iterative_subtraction.fpga_single_extraction_stage(
+    next_sig_vs_t, reco_arrival_slices, debug = spe.extractors.iterative_subtraction.one_stage(
         sig_vs_t=remain_sig_vs_t,
         min_baseline_amplitude=MIN_BASELINE_AMPLITUDE,
         pulse_template=FPGA_pulse_template,
