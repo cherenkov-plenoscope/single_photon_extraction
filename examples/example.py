@@ -28,7 +28,11 @@ PULSE_CONFIG = {
 
 # make pulse template
 # ===================
-pt_offset_num_samples = int(PULSE_CONFIG["decay_time"] // ANALOG_CONFIG["periode"])
+lowpass_kernel = spe.signal.make_lowpass_kernel(
+    periode=ANALOG_CONFIG["periode"],
+    lowpass_cutoff_frequency=ANALOG_CONFIG["bandwidth"],
+)
+pt_offset_num_samples = int(len(lowpass_kernel) // 2)
 pt_pulse_start = spe.signal.make_pulse(
     periode=ANALOG_CONFIG["periode"],
     pulse_amplitude=PULSE_CONFIG["amplitude"],
@@ -104,7 +108,7 @@ if PLOT:
     _adc_periode = ANALOG_CONFIG["periode"] * ADC_CONFIG["skips"]
 
     fig = splt.figure({"rows": 1080, "cols": 1920, "fontsize": 1})
-    ax = splt.add_axes(fig, [0.15, 0.15, 0.8, 0.8])
+    ax = splt.add_axes(fig, PLOT_AXSPAN)
     num_phases = 3
     phases = np.linspace(0.0, _adc_periode, num_phases, endpoint=False)
     _phase_shift_in_num_analog_samples = (
@@ -160,7 +164,7 @@ if PLOT:
 
     ax.set_xlabel("time / s")
     ax.set_ylabel("amplitude / 1")
-    ax.set_xlim([_time_start + _adc_periode*2, _time_start + _adc_periode*10])
+    ax.set_xlim([_time_start + _adc_periode*0, _time_start + _adc_periode*8])
     fig.savefig("pulse_template_adc_various_phases.jpg")
     splt.close_figure(fig)
 
@@ -274,6 +278,7 @@ if PLOT:
     splt.close_figure(fig)
 
 
+
 MIN_BASELINE_AMPLITUDE = -0.1 * PULSE_CONFIG["amplitude"]
 OFFSET_SLICES = 60
 GRAD_THRESHOLDS = 0.4 * np.ones(10)
@@ -294,7 +299,10 @@ FPGA_pulse_template = spe.signal.to_analog_level(
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
     num_bits=FPGA_CONFIG["num_bits"],
-)[2 * FPGA_CONFIG["adc_repeats"] : 8 * FPGA_CONFIG["adc_repeats"]]
+)
+FPGA_pulse_template = FPGA_pulse_template[
+    2 * FPGA_CONFIG["adc_repeats"] : 8 * FPGA_CONFIG["adc_repeats"]
+]
 if PLOT:
     fig = splt.figure(PLOT_FIGSTYLE)
     ax = splt.add_axes(fig, PLOT_AXSPAN)

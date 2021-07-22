@@ -80,16 +80,23 @@ def add_first_to_second_at(f1, f2, injection_slices):
     return out
 
 
-def make_analog_output(periode, perfect, lowpass_cutoff_frequency):
+def make_lowpass_kernel(periode, lowpass_cutoff_frequency):
     scaling_to_let_the_gain_go_down_to_one_half_at_cutoff_frequency = 0.19
-    bandwitdh_kernel = make_bell(
+    kernel = make_bell(
         periode=periode,
         bell_std=(
             scaling_to_let_the_gain_go_down_to_one_half_at_cutoff_frequency /
             lowpass_cutoff_frequency
         )
     )
-    analog = np.convolve(perfect, bandwitdh_kernel, mode="same")
+    return kernel
+
+def make_analog_output(periode, perfect, lowpass_cutoff_frequency):
+    kernel = make_lowpass_kernel(
+        periode=periode,
+        lowpass_cutoff_frequency=lowpass_cutoff_frequency
+    )
+    analog = np.convolve(perfect, kernel, mode="same")
     return analog
 
 
