@@ -28,9 +28,9 @@ def apply(sampling_periode, sig, config):
 
     response_rising = np.zeros(len(sig), dtype=np.int)
     for s in range(len(sig)):
-    	if s > 1:
-    		if response[s] == 1 and response[s - 1] == 0:
-    			response_rising[s] = 1
+        if s > 1:
+            if response[s] == 1 and response[s - 1] == 0:
+                response_rising[s] = 1
     DEBUG["response_rising"] = response_rising
 
     reco_arrival_slices = np.where(response_rising)[0]
