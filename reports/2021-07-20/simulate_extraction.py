@@ -6,8 +6,8 @@ import sebastians_matplotlib_addons as splt
 
 
 PLOT = True
-PLOT_FIGSTYLE = {"rows": 720, "cols": 1920, "fontsize": 1}
-PLOT_AXSPAN = [0.1, 0.15, 0.85, 0.8]
+PLOT_FIGSTYLE = {"rows": 720, "cols": 1920, "fontsize": 1.2}
+PLOT_AXSPAN = [0.12, 0.2, 0.80, 0.75]
 PLOT_DEBUG = False
 
 prng = np.random.Generator(np.random.MT19937(seed=0))
@@ -19,9 +19,9 @@ ANALOG_CONFIG = {
 
 PULSE_CONFIG = {
     "amplitude": 1.0,
-    "amplitude_std": 0.0,
+    "amplitude_std": 0.01,
     "decay_time": 50e-9,
-    "decay_time_std": 0.0,
+    "decay_time_std": 1e-9,
 }
 
 # make pulse template
@@ -107,7 +107,7 @@ if PLOT:
     _time_start = -pt_offset_num_analog_samples * ANALOG_CONFIG["periode"]
     _adc_periode = ANALOG_CONFIG["periode"] * ADC_CONFIG["skips"]
 
-    fig = splt.figure({"rows": 1080, "cols": 1920, "fontsize": 1})
+    fig = splt.figure({"rows": 1080, "cols": 1920, "fontsize": 1.2})
     ax = splt.add_axes(fig, PLOT_AXSPAN)
     num_phases = 3
     phases = np.linspace(0.0, _adc_periode, num_phases, endpoint=False)
@@ -222,7 +222,7 @@ if PLOT:
     ax.set_xlim([1e6, 1e9])
     ax.set_ylim([1e-3, 1.1e0])
     ax.loglog()
-    fig.savefig("pulse_power_spectrum.jpg")
+    fig.savefig("analog_transmission.jpg")
     splt.close_figure(fig)
 
 
@@ -254,6 +254,7 @@ if PLOT:
         FPGA_pulse_rising_edge_template,
         "k",
     )
+    ax.set_ylabel("amplitude / 1")
     ax.set_xlabel("time / s")
     fig.savefig("FPGA_pulse_rising_edge_template.jpg")
     splt.close_figure(fig)
@@ -275,6 +276,7 @@ if PLOT:
         FPGA_sub_pulse_template,
         "k",
     )
+    ax.set_ylabel("amplitude / 1")
     ax.set_xlabel("time / s")
     fig.savefig("FPGA_spe_sub_pulse_template.jpg")
     splt.close_figure(fig)
@@ -289,7 +291,7 @@ sub_config = {
     "num_subtraction_offset_slices": int(
         len(FPGA_pulse_rising_edge_template) * 0.85
     ),
-    "stage_thresholds": 0.5 * ANALOG_PULSE_AMPLITUDE * np.ones(10),
+    "stage_thresholds": 0.5 * ANALOG_PULSE_AMPLITUDE * np.ones(12),
     "num_cooldown_slices": len(FPGA_sub_pulse_template),
 }
 
@@ -424,7 +426,7 @@ for ii_nsb in range(len(NSB_RATES)):
     }
 
     performance = {}
-    time_deltas = FPGA_PERIODE * np.arange(10)
+    time_deltas = FPGA_PERIODE * np.arange(8)
     for mk in extraction_methods:
         performance[mk] = []
         for time_delta in time_deltas:
