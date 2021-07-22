@@ -12,7 +12,7 @@ PLOT_AXSPAN = [0.1, 0.15, 0.85, 0.8]
 prng = np.random.Generator(np.random.MT19937(seed=0))
 NUM_SAMPLES = 4 * 1000
 
-NSB_RATE = 5e6
+NSB_RATE = 15e6
 
 ANALOG_CONFIG = {
     "periode": 0.5e-9,
@@ -32,16 +32,17 @@ lowpass_kernel = spe.signal.make_lowpass_kernel(
     periode=ANALOG_CONFIG["periode"],
     lowpass_cutoff_frequency=ANALOG_CONFIG["bandwidth"],
 )
-pt_offset_num_samples = int(len(lowpass_kernel) // 2)
+pt_offset_num_analog_samples = int(len(lowpass_kernel) // 2)
+pt_offset_time = pt_offset_num_analog_samples * ANALOG_CONFIG["periode"]
 pt_pulse_start = spe.signal.make_pulse(
     periode=ANALOG_CONFIG["periode"],
     pulse_amplitude=PULSE_CONFIG["amplitude"],
     pulse_decay_time=PULSE_CONFIG["decay_time"],
 )
-pt_pulse = np.zeros(len(pt_pulse_start) + pt_offset_num_samples)
+pt_pulse = np.zeros(len(pt_pulse_start) + pt_offset_num_analog_samples)
 
 pt_pulse = spe.signal.add_first_to_second_at(
-    f1=pt_pulse_start, f2=pt_pulse, injection_slices=[pt_offset_num_samples],
+    f1=pt_pulse_start, f2=pt_pulse, injection_slices=[pt_offset_num_analog_samples],
 )
 pt_analog = spe.signal.make_analog_output(
     periode=ANALOG_CONFIG["periode"],
@@ -104,7 +105,7 @@ ptemp = {
 if PLOT:
     # plot possible phase shift
     # -------------------------
-    _time_start = -pt_offset_num_samples*ANALOG_CONFIG["periode"]
+    _time_start = -pt_offset_num_analog_samples*ANALOG_CONFIG["periode"]
     _adc_periode = ANALOG_CONFIG["periode"] * ADC_CONFIG["skips"]
 
     fig = splt.figure({"rows": 1080, "cols": 1920, "fontsize": 1})
@@ -170,7 +171,7 @@ if PLOT:
 
 
 if PLOT:
-    _time_start = -pt_offset_num_samples*ANALOG_CONFIG["periode"]
+    _time_start = -pt_offset_num_analog_samples*ANALOG_CONFIG["periode"]
     _ts = spe.signal.make_timeseries(
         num_samples=len(pt_pulse),
         periode=ANALOG_CONFIG["periode"],
@@ -278,11 +279,8 @@ if PLOT:
     splt.close_figure(fig)
 
 
-
-MIN_BASELINE_AMPLITUDE = -0.1 * PULSE_CONFIG["amplitude"]
-OFFSET_SLICES = 60
-GRAD_THRESHOLDS = 0.4 * np.ones(10)
-
+pt_offset_num_fpga_samples = pt_offset_num_analog_samples / (ADC_CONFIG["skips"]/FPGA_CONFIG["adc_repeats"])
+pt_offset_num_fpga_samples = int(pt_offset_num_fpga_samples)
 
 FPGA_sig_vs_t = spe.signal.to_analog_level(
     digital=event["fpga"],
@@ -294,28 +292,26 @@ ramp_slices = 100
 ramp = np.linspace(0, 1, ramp_slices)
 FPGA_sig_vs_t[0:ramp_slices] = FPGA_sig_vs_t[0:ramp_slices] * ramp
 
-FPGA_pulse_template = spe.signal.to_analog_level(
+FPGA_pulse_edge = spe.signal.to_analog_level(
     digital=ptemp["fpga"],
     amplitude_min=ADC_CONFIG["amplitude_min"],
     amplitude_max=ADC_CONFIG["amplitude_max"],
     num_bits=FPGA_CONFIG["num_bits"],
 )
-FPGA_pulse_template = FPGA_pulse_template[
-    2 * FPGA_CONFIG["adc_repeats"] : 8 * FPGA_CONFIG["adc_repeats"]
-]
+FPGA_pulse_edge = FPGA_pulse_edge[0: 2 * pt_offset_num_fpga_samples]
 if PLOT:
     fig = splt.figure(PLOT_FIGSTYLE)
     ax = splt.add_axes(fig, PLOT_AXSPAN)
     ax.step(
         spe.signal.make_timeseries(
-            len(FPGA_pulse_template),
+            len(FPGA_pulse_edge),
             periode=FPGA_PERIODE,
         ),
-        FPGA_pulse_template,
+        FPGA_pulse_edge,
         "k",
     )
     ax.set_xlabel("time / s")
-    fig.savefig("FPGA_pulse_template.jpg")
+    fig.savefig("FPGA_pulse_edge.jpg")
     splt.close_figure(fig)
 
 
@@ -340,6 +336,11 @@ if PLOT:
     fig.savefig("FPGA_spe_sub_pulse_template.jpg")
     splt.close_figure(fig)
 
+
+MIN_BASELINE_AMPLITUDE = -0.1 * ANALOG_PULSE_AMPLITUDE
+OFFSET_SLICES = int(len(FPGA_pulse_edge)*0.85)
+print("OFFSET_SLICES", OFFSET_SLICES)
+GRAD_THRESHOLDS = 0.4 * np.ones(10)
 COOLDOWN_SLICES = len(FPGA_sub_pulse_template)
 
 
@@ -351,7 +352,7 @@ for stage in range(len(GRAD_THRESHOLDS)):
     next_sig_vs_t, reco_arrival_slices, debug = spe.extractors.iterative_subtraction.one_stage(
         sig_vs_t=remain_sig_vs_t,
         min_baseline_amplitude=MIN_BASELINE_AMPLITUDE,
-        pulse_template=FPGA_pulse_template,
+        pulse_template=FPGA_pulse_edge,
         sub_pulse_template=FPGA_sub_pulse_template,
         sub_offset_slices=OFFSET_SLICES,
         grad_threshold=GRAD_THRESHOLDS[stage],
@@ -367,7 +368,7 @@ for stage in range(len(GRAD_THRESHOLDS)):
         ax.plot(debug["extraction_candidates"], "b", alpha=0.1)
         ax.plot(debug["extraction"], "r", alpha=0.1)
         ax.set_ylim([-0.2, 1.2])
-        ax.set_xlabel("time / samples")
+        ax.set_xlabel("time / fpga-samples")
         ax.set_ylabel("amplitude")
         fig.savefig("spe_{:06d}.jpg".format(stage))
         splt.close_figure(fig)
@@ -375,7 +376,7 @@ for stage in range(len(GRAD_THRESHOLDS)):
     remain_sig_vs_t = next_sig_vs_t
 
 reco_arrival_fpga_slices = np.concatenate(recos)
-reco_arrival_fpga_slices += int(0.7 * OFFSET_SLICES)
+reco_arrival_fpga_slices += int(0.5 * OFFSET_SLICES)
 
 
 event["reco_arrival_times"] = reco_arrival_fpga_slices * FPGA_PERIODE

@@ -71,7 +71,7 @@ def make_night_sky_background_event(
     true_arrival_slices = (true_arrival_times / analog_periode).astype(np.int)
     true_arrival_times = analog_periode * true_arrival_slices
 
-    analog = signal.make_timeseries(num_samples=num_samples, periode=analog_periode)
+    perfect = np.zeros(num_samples)
 
     for true_arrival_slice in true_arrival_slices:
         amp = prng.normal(
@@ -89,17 +89,15 @@ def make_night_sky_background_event(
             pulse_decay_time=dec,
         )
 
-        analog = signal.add_first_to_second_at(
-            f1=p, f2=analog, injection_slices=[true_arrival_slice],
+        perfect = signal.add_first_to_second_at(
+            f1=p, f2=perfect, injection_slices=[true_arrival_slice],
         )
 
-    bandwidth_periode = 1 / analog_bandwidth
-
-    bandwidth_kernel = signal.make_bell(
-        num_samples=None, periode=analog_periode, bell_std=bandwidth_periode
+    analog = signal.make_analog_output(
+        periode=analog_periode,
+        perfect=perfect,
+        lowpass_cutoff_frequency=analog_bandwidth,
     )
-
-    analog = np.convolve(analog, bandwidth_kernel, mode="same")
 
     adc = signal.make_adc_output(
         analog=analog,
