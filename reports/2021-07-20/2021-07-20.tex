@@ -143,9 +143,9 @@ All extrapolated from 700 - 1000\,nm.
 \centering%
 \includegraphics[width=1.0\linewidth]{photon_efficiency.jpg}%
 \caption{
-Dotted line is silicon-photo-multiplier (SiPM), \mbox{Hamamatsu\,S10362-33-050C}, shape according to \cite{hamamatsu2009mppc}, and scaling according to \cite{anderhub2013design}.
+Dashed line is silicon-photo-multiplier (SiPM), \mbox{Hamamatsu\,S10362-33-050C}, shape according to \cite{hamamatsu2009mppc}, and scaling according to \cite{anderhub2013design}.
 Extrapolated from 700 - 1000\,nm.
-Dashed line is photo-multiplier-tube (PMT), \mbox{Hamamatsu\,R11920-100-05} \cite{toyama2013novel}
+Dotted line is photo-multiplier-tube (PMT), \mbox{Hamamatsu\,R11920-100-05} \cite{toyama2013novel}
 }%
 \label{fig:pde}
 \end{figure}
@@ -240,7 +240,7 @@ The configuration of the simulated read-out. The spread of decay-times and ampli
 %
 The analog path of our read-out is designed to match $\fadc{}$ with a gain that drops down to 1/2 (-3dB) at the ADC's Nyquist-frequency $f = \fadc{}/2$, see Figure \ref{FigSimAnalogTransmission}.
 %
-Also the electric coupling to the photo-sensor is chosen have a decay-time of the pulse that covers multiple ADC samples.
+The electric coupling to the photo-sensor is chosen for the pulse to have a decay-time that covers multiple ADC samples.
 %
 To avoid additional noise and artifacts, we do not use pulse-shaping such as $\lambda /2$ reflections.
 %
