@@ -40,16 +40,16 @@
 
 \begin{multicols}{2}%
 %
-The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle from the Cherenkov-light emitted in air-showers.
+The atmospheric Cherenkov-method can reconstruct the type, energy, and direction of a cosmic particle from an air-shower's Cherenkov-light.
 %
-Instruments must sense blueish Cherenkov-light, better reject reddish night-sky-light, and must reconstruct the arrival-times of the photons with $\sim{}$5\,ns resolution.
+Cherenkov-telescopes sense blueish Cherenkov-light, better reject reddish night-sky-light, and reconstruct the arrival-times of photons with $\sim{}$5\,ns resolution.
 %
 Photo-sensors and read-out are cost-drivers of the method.
 \newline
 %
 We expect a continues read-out into digital buffers, where each individual photon is recorded, to be beneficial for the atmospheric Cherenkov-method as it allows fast computational access to all observables.
 %
-We expect such a read-out to lower the energy-threshold \cite{jung2005star}, to improve the separation of Cherenkov- from night-sky-light, and to improve the reconstruction of the cosmic particle \cite{catalano2008single}.
+The energy-threshold can be lower \cite{jung2005star}, the separation of Cherenkov- from night-sky-light can be better, and overall the reconstruction of the cosmic particle will benefit\cite{catalano2008single}.
 \newline
 %
 One way of continues read-out are flash analog-digital-converters (ADC)s.
@@ -61,17 +61,17 @@ However, their cost and power-consumption scale rapidly with their sampling freq
 \text{Power} &\sim& \fadc{}^2.
 \end{eqnarray*}
 %
-In this report, we explore a possible read-out with many slow \mbox{($f$ < 100\,MHz)} ADCs.
+In this report, we explore a read-out with many slow \mbox{($f$ < 100\,MHz)} ADCs.
 %
-We want each slow ADC to digitizes the signal of a photo-sensor that have only little acceptances (area and solid angle) and thus a low rate of night-sky-photons.
+We want each ADC to digitize the signal of a photo-sensor that has little acceptances (area $\times{}$ solid angle) and thus a low rate of night-sky-photons.
 %
-We hope that when the photo-sensor's rate of night-sky-photons is low, a slow ADC in combination with a little computing will be able to reconstruct the arrival-times of the individual photons sufficiently accurate, i.e. better than the sampling period $1/\fadc{}$.
+We hope that when the rate of night-sky-photons is low, a slow ADC and a little computing will be able to reconstruct the arrival-times of the individual photons sufficiently accurate with $\pm5\,$ns, i.e. better than the sampling-period $1/\fadc{}$.
 %
-Since the cost of silicon photo-sensors are mostly proportional to their area, there is only little cost overhead when replacing a big sensor with multiple small ones.
+Since the cost of silicon photo-sensors are mostly proportional to their area, there is only little overhead when replacing a big sensor with multiple small ones.
 %
-Due to the rapid scaling of the ADC's demands with sampling frequency $\fadc{}$, many slow ADCs might outperform fewer fast ADCs in both power-consumption and cost.
+Due to the rapid scaling of the ADC's demands with sampling-frequency $\fadc{}$, many slow ADCs might outperform fewer fast ADCs in both power-consumption and cost.
 \newline
-Further, the finer binning of photo-sensors might allow the implementation of small aperture (< 100\,m$^2$) plenoscopes covering large ($> 300\,(1^\circ{})^2$) field-of-views due to computational compensation of optical aberrations. \cite{mueller2019phd}.
+Further, the finer binning of photo-sensors might allow plenoscopes with large  field-of-views ($> 300\,(1^\circ{})^2$) due to computational compensation of optical aberrations. \cite{mueller2019phd}.
 %
 \section*{Sensing Night-Sky-Photons}%
 \label{sec:nsb}%
@@ -121,9 +121,9 @@ Most observations take place in the range of fluxes from
 \approx{}0.8 &> \F{} / \Ftyp{} >& \approx{}4.
 \end{eqnarray*}
 %
-Figure \ref{fig:obstimeFact} shows the distribution of $\F{}$ with a special Cherenkov-telescope FACT which pioneered observations in the brightest full moon conditions using robust silicon photo-sensors.
+Figure \ref{fig:obstimeFact} shows the distribution of $\F{}$ for a Cherenkov-telescope that deliberately pushed observations into the brightest full moon conditions.
 %
-Even with FACT observations beyond $\F{} / \Ftyp{} = 5$ are rare.
+Even then, observations beyond $\F{} / \Ftyp{} = 5$ are rare.
 %
 Table \ref{TabInstrumentsNsbRates} shows the expected rates of night-sky-photons in different instruments.
 %
@@ -346,7 +346,7 @@ Hatched area marks the decay-time of the pulse down to $\mathrm{e}^{-1}$.
 \centering%
 \includegraphics[width=1.0\linewidth]{pulse_template_adc_various_phases.jpg}%
 \caption{
-The photo-sensor's pulse seen by the ADC with various phases.
+The photo-sensor's pulse seen by the ADC with various phases but without the ADC's amplitude-noise.
 }%
 \label{FigSimPulsePhases}
 \end{figure}
